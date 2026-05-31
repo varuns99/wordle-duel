@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Wordle Duel</title>
+    <link rel="stylesheet" href="public/styles.css">
+  </head>
+  <body data-word-list-url="public/words.json" data-api-base="api">
+    <main class="shell">
+      <section id="menuView" class="view view-active">
+        <div class="brand-block">
+          <p class="eyebrow">Wordle Duel</p>
+          <h1>Race the word, not the letters.</h1>
+          <p class="lede">Play solo or start a two-player room where your opponent only sees your Wordle color trail and solve time.</p>
+        </div>
+        <div class="menu-panel">
+          <label>
+            Display name
+            <input id="playerName" maxlength="24" placeholder="Player">
+          </label>
+          <div class="menu-actions">
+            <button id="soloBtn" class="primary">Daily Challenge</button>
+            <button id="createRoomBtn">Create 2P Room</button>
+            <button id="joinRoomBtn">Join Room</button>
+            <button id="leaderboardBtn">Leaderboard</button>
+          </div>
+          <label id="roomJoinField" class="hidden">
+            Room code
+            <input id="roomCodeInput" maxlength="6" placeholder="ABC123">
+          </label>
+          <div id="menuStatus" class="menu-status" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="gameView" class="view">
+        <header class="game-header">
+          <button id="backBtn" class="icon-btn" aria-label="Back to menu">←</button>
+          <div>
+            <p id="modeLabel" class="eyebrow">Solo</p>
+            <h2 id="gameTitle">Wordle Duel</h2>
+          </div>
+          <div class="timer" id="timer">00:00.0</div>
+        </header>
+
+        <aside id="opponentPanel" class="opponent hidden">
+          <div>
+            <p class="eyebrow">Opponent</p>
+            <strong id="opponentName">Waiting...</strong>
+          </div>
+          <div id="opponentGrid" class="mini-grid"></div>
+        </aside>
+
+        <section class="board-wrap">
+          <div id="message" class="message">Guess the 5-letter word.</div>
+          <div id="board" class="board" aria-label="Wordle board"></div>
+          <div id="keyboard" class="keyboard"></div>
+        </section>
+      </section>
+
+      <section id="leaderboardView" class="view">
+        <header class="game-header">
+          <button id="leaderBackBtn" class="icon-btn" aria-label="Back to menu">←</button>
+          <div>
+            <p class="eyebrow">Best Times</p>
+            <h2>Leaderboard</h2>
+          </div>
+        </header>
+        <div id="leaderboardList" class="leaderboard"></div>
+      </section>
+    </main>
+
+    <script src="public/app.js"></script>
+  </body>
+</html>
