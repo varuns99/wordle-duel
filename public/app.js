@@ -432,24 +432,34 @@ async function createRoom() {
   }
 }
 
-async function joinRoom() {
+function showJoinRoomForm() {
   if (!state.backendAvailable) {
     $("menuStatus").textContent = "Two-player rooms need the Node backend or another realtime host.";
     return;
   }
-  const field = $("roomJoinField");
-  if (field.classList.contains("hidden")) {
-    field.classList.remove("hidden");
-    $("menuStatus").textContent = "Enter a room code, then press Join Room again.";
-    $("roomCodeInput").focus();
+  $("roomJoinField").classList.remove("hidden");
+  $("submitJoinRoomBtn").classList.remove("hidden");
+  $("menuStatus").textContent = "Enter a room code, then press Join.";
+  $("roomCodeInput").focus();
+}
+
+async function submitJoinRoom() {
+  if (!state.backendAvailable) {
+    $("menuStatus").textContent = "Two-player rooms need the Node backend or another realtime host.";
     return;
   }
   $("menuStatus").textContent = "";
+  const code = $("roomCodeInput").value.trim().toUpperCase();
+  if (!code) {
+    $("menuStatus").textContent = "Enter a room code first.";
+    $("roomCodeInput").focus();
+    return;
+  }
   try {
     const response = await fetch(apiUrl("rooms/join"), {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: playerName(), code: $("roomCodeInput").value })
+      body: JSON.stringify({ name: playerName(), code })
     });
     const data = await response.json();
     if (!response.ok) {
@@ -527,7 +537,11 @@ function backToMenu() {
 
 $("soloBtn").addEventListener("click", () => resetGame({ mode: "solo", answer: dailyAnswer() }));
 $("createRoomBtn").addEventListener("click", createRoom);
-$("joinRoomBtn").addEventListener("click", joinRoom);
+$("joinRoomBtn").addEventListener("click", showJoinRoomForm);
+$("submitJoinRoomBtn").addEventListener("click", submitJoinRoom);
+$("roomCodeInput").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") submitJoinRoom();
+});
 $("leaderboardBtn").addEventListener("click", showLeaderboard);
 $("backBtn").addEventListener("click", backToMenu);
 $("leaderBackBtn").addEventListener("click", () => showView("menuView"));
@@ -570,6 +584,7 @@ async function checkBackend() {
   }
   $("createRoomBtn").disabled = !state.backendAvailable;
   $("joinRoomBtn").disabled = !state.backendAvailable;
+  $("submitJoinRoomBtn").disabled = !state.backendAvailable;
   $("createRoomBtn").title = state.backendAvailable ? "" : "Requires the Node backend or a realtime hosting service.";
   $("joinRoomBtn").title = state.backendAvailable ? "" : "Requires the Node backend or a realtime hosting service.";
   if (!state.backendAvailable && WORDS.answers.length) {
@@ -580,5 +595,6 @@ async function checkBackend() {
 $("soloBtn").disabled = true;
 $("createRoomBtn").disabled = true;
 $("joinRoomBtn").disabled = true;
+$("submitJoinRoomBtn").disabled = true;
 initTheme();
 loadWords();

@@ -93,6 +93,15 @@ button:disabled {
   font-weight: 800;
 }
 
+.positive {
+  width: 100%;
+  margin-top: 10px;
+  background: var(--green);
+  border-color: var(--green);
+  color: #08150d;
+  font-weight: 900;
+}
+
 .shell {
   width: min(1100px, 100%);
   min-height: 100vh;
