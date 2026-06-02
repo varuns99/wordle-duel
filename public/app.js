@@ -30,9 +30,28 @@ const DAILY_CHALLENGE_OVERRIDES = {
   "2026-06-02": 921,
   "2026-06-03": 2048
 };
+const THEME_STORAGE_KEY = "wordleDuelTheme";
 
 function apiUrl(path) {
   return `${API_BASE}/${path}`;
+}
+
+function applyTheme(theme) {
+  const isLight = theme === "light";
+  document.body.classList.toggle("light-theme", isLight);
+  $("themeToggle")?.setAttribute("aria-pressed", String(isLight));
+  if ($("themeLabel")) $("themeLabel").textContent = isLight ? "Light" : "Dark";
+}
+
+function initTheme() {
+  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+  const preferredTheme = window.matchMedia?.("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  applyTheme(savedTheme || preferredTheme);
+  $("themeToggle")?.addEventListener("click", () => {
+    const nextTheme = document.body.classList.contains("light-theme") ? "dark" : "light";
+    localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    applyTheme(nextTheme);
+  });
 }
 
 function showView(id) {
@@ -58,6 +77,44 @@ function calculatePoints(attempts, elapsedMs) {
   const safeElapsedMs = Math.max(0, Number(elapsedMs) || 0);
   const seconds = safeElapsedMs / 1000;
   return Math.max(0, Math.round(10000 - safeAttempts * 1000 - seconds * 10));
+}
+
+function aggregateLeaderboard(entries) {
+  const players = new Map();
+  for (const entry of entries) {
+    const attempts = Math.min(6, Math.max(1, Number(entry.attempts) || 6));
+    const elapsedMs = Math.max(0, Number(entry.elapsedMs) || 0);
+    const points = Number(entry.points) || calculatePoints(attempts, elapsedMs);
+    const name = String(entry.name || "Player").slice(0, 24);
+    const key = name.trim().toLowerCase() || "player";
+    const current = players.get(key) || {
+      name,
+      games: 0,
+      totalPoints: 0,
+      bestPoints: 0,
+      bestAttempts: 6,
+      bestElapsedMs: Number.POSITIVE_INFINITY,
+      lastSolvedAt: entry.solvedAt || ""
+    };
+    current.games += 1;
+    current.totalPoints += points;
+    current.bestPoints = Math.max(current.bestPoints, points);
+    if (attempts < current.bestAttempts || (attempts === current.bestAttempts && elapsedMs < current.bestElapsedMs)) {
+      current.bestAttempts = attempts;
+      current.bestElapsedMs = elapsedMs;
+    }
+    if ((entry.solvedAt || "") > current.lastSolvedAt) {
+      current.name = name;
+      current.lastSolvedAt = entry.solvedAt || "";
+    }
+    players.set(key, current);
+  }
+  return [...players.values()]
+    .map((player) => ({
+      ...player,
+      bestElapsedMs: Number.isFinite(player.bestElapsedMs) ? player.bestElapsedMs : 0
+    }))
+    .sort((a, b) => b.totalPoints - a.totalPoints || b.bestPoints - a.bestPoints || a.bestElapsedMs - b.bestElapsedMs);
 }
 
 function setMessage(text) {
@@ -271,7 +328,7 @@ async function applyGuessResult({ guess, scored, won, answer }) {
     clearInterval(state.timerId);
     updateTimer();
     setMessage(won ? `Solved in ${state.row + 1} guesses.` : `The word was ${answer.toUpperCase()}.`);
-    if (won) saveLeaderboard();
+    if (won && state.mode !== "duel") saveLeaderboard();
     return;
   }
 
@@ -404,9 +461,11 @@ async function showLeaderboard() {
     if (!response.ok) throw new Error("Leaderboard API unavailable");
     data = await response.json();
   } catch {
-    data = { entries: JSON.parse(localStorage.getItem("wordleDuelScores") || "[]") };
+    const localEntries = JSON.parse(localStorage.getItem("wordleDuelScores") || "[]");
+    data = { entries: localEntries, players: aggregateLeaderboard(localEntries) };
   }
-  if (!data.entries.length) {
+  const players = data.players || aggregateLeaderboard(data.entries || []);
+  if (!players.length) {
     list.textContent = "No solved games yet.";
     return;
   }
@@ -416,26 +475,22 @@ async function showLeaderboard() {
   header.innerHTML = `
     <span>Rank</span>
     <span>Name</span>
-    <span>Points</span>
-    <span>Tries</span>
-    <span>Time</span>
-    <span class="mode-cell">Mode</span>
+    <span>Total</span>
+    <span>Games</span>
+    <span>Best Time</span>
+    <span class="mode-cell">Best Tries</span>
   `;
   list.append(header);
-  const entries = data.entries.map((entry) => ({
-    ...entry,
-    points: calculatePoints(entry.attempts, entry.elapsedMs)
-  })).sort((a, b) => b.points - a.points || a.attempts - b.attempts || a.elapsedMs - b.elapsedMs);
-  entries.slice(0, 20).forEach((entry, index) => {
+  players.slice(0, 20).forEach((player, index) => {
     const row = document.createElement("div");
     row.className = "leader-row";
     row.innerHTML = `
       <span>#${index + 1}</span>
-      <strong>${escapeHtml(entry.name)}</strong>
-      <span>${entry.points.toLocaleString()}</span>
-      <span>${entry.attempts}/6</span>
-      <span>${formatTime(entry.elapsedMs)}</span>
-      <span class="mode-cell">${entry.mode}</span>
+      <strong>${escapeHtml(player.name)}</strong>
+      <span>${player.totalPoints.toLocaleString()}</span>
+      <span>${player.games}</span>
+      <span>${formatTime(player.bestElapsedMs)}</span>
+      <span class="mode-cell">${player.bestAttempts}/6</span>
     `;
     list.append(row);
   });
@@ -512,4 +567,5 @@ async function checkBackend() {
 $("soloBtn").disabled = true;
 $("createRoomBtn").disabled = true;
 $("joinRoomBtn").disabled = true;
+initTheme();
 loadWords();

@@ -6,7 +6,7 @@ const { randomUUID } = require("crypto");
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || (process.env.PORT ? "0.0.0.0" : "127.0.0.1");
 const PUBLIC_DIR = path.join(__dirname, "public");
-const DATA_DIR = path.join(__dirname, "data");
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 const LEADERBOARD_FILE = path.join(DATA_DIR, "leaderboard.json");
 const WORDS_FILE = path.join(PUBLIC_DIR, "words.json");
 
@@ -39,7 +39,7 @@ function readLeaderboard() {
 
 function writeLeaderboard(entries) {
   ensureData();
-  fs.writeFileSync(LEADERBOARD_FILE, JSON.stringify(entries.slice(0, 50), null, 2));
+  fs.writeFileSync(LEADERBOARD_FILE, JSON.stringify(entries.slice(-1000), null, 2));
 }
 
 function calculatePoints(attempts, elapsedMs) {
@@ -47,6 +47,71 @@ function calculatePoints(attempts, elapsedMs) {
   const safeElapsedMs = Math.max(0, Number(elapsedMs) || 0);
   const seconds = safeElapsedMs / 1000;
   return Math.max(0, Math.round(10000 - safeAttempts * 1000 - seconds * 10));
+}
+
+function normalizeScore(input) {
+  const attempts = Math.min(6, Math.max(1, Number(input.attempts || 0)));
+  const elapsedMs = Math.max(0, Number(input.elapsedMs || 0));
+  return {
+    id: input.id || randomUUID(),
+    gameId: input.gameId || null,
+    name: String(input.name || "Player").slice(0, 24),
+    mode: input.mode === "duel" || input.mode === "Duel" ? "Duel" : "Solo",
+    attempts,
+    elapsedMs,
+    points: calculatePoints(attempts, elapsedMs),
+    solvedAt: input.solvedAt || new Date().toISOString()
+  };
+}
+
+function aggregateLeaderboard(entries) {
+  const players = new Map();
+  for (const entry of entries.map(normalizeScore)) {
+    const key = entry.name.trim().toLowerCase() || "player";
+    const current = players.get(key) || {
+      name: entry.name,
+      games: 0,
+      totalPoints: 0,
+      bestPoints: 0,
+      bestAttempts: 6,
+      bestElapsedMs: Number.POSITIVE_INFINITY,
+      lastSolvedAt: entry.solvedAt
+    };
+    current.games += 1;
+    current.totalPoints += entry.points;
+    current.bestPoints = Math.max(current.bestPoints, entry.points);
+    if (entry.points > current.bestPoints) current.bestPoints = entry.points;
+    if (
+      entry.attempts < current.bestAttempts ||
+      (entry.attempts === current.bestAttempts && entry.elapsedMs < current.bestElapsedMs)
+    ) {
+      current.bestAttempts = entry.attempts;
+      current.bestElapsedMs = entry.elapsedMs;
+    }
+    if (new Date(entry.solvedAt) > new Date(current.lastSolvedAt)) {
+      current.name = entry.name;
+      current.lastSolvedAt = entry.solvedAt;
+    }
+    players.set(key, current);
+  }
+  return [...players.values()]
+    .map((player) => ({
+      ...player,
+      bestElapsedMs: Number.isFinite(player.bestElapsedMs) ? player.bestElapsedMs : 0
+    }))
+    .sort((a, b) => b.totalPoints - a.totalPoints || b.bestPoints - a.bestPoints || a.bestElapsedMs - b.bestElapsedMs);
+}
+
+function recordLeaderboardScore(score) {
+  const entries = readLeaderboard().map(normalizeScore);
+  const normalized = normalizeScore(score);
+  if (normalized.gameId && entries.some((entry) => entry.gameId === normalized.gameId)) {
+    return { entries, players: aggregateLeaderboard(entries), saved: false };
+  }
+  entries.push(normalized);
+  entries.sort((a, b) => new Date(a.solvedAt) - new Date(b.solvedAt));
+  writeLeaderboard(entries);
+  return { entries, players: aggregateLeaderboard(entries), saved: true };
 }
 
 function dailyChallengeKey(date = new Date()) {
@@ -186,30 +251,20 @@ function sendStatic(req, res) {
 async function handleApi(req, res) {
   try {
     if (req.method === "GET" && req.url === "/api/leaderboard") {
-      json(res, 200, { entries: readLeaderboard() });
+      const entries = readLeaderboard().map(normalizeScore);
+      json(res, 200, { entries, players: aggregateLeaderboard(entries) });
       return;
     }
 
     if (req.method === "POST" && req.url === "/api/leaderboard") {
       const body = await readBody(req);
-      const entries = readLeaderboard();
-      const attempts = Math.min(6, Math.max(1, Number(body.attempts || 0)));
-      const elapsedMs = Math.max(0, Number(body.elapsedMs || 0));
-      entries.push({
-        id: randomUUID(),
-        name: String(body.name || "Player").slice(0, 24),
-        mode: body.mode === "duel" ? "Duel" : "Solo",
-        attempts,
-        elapsedMs,
-        points: calculatePoints(attempts, elapsedMs),
-        solvedAt: new Date().toISOString()
+      const result = recordLeaderboardScore({
+        name: body.name,
+        mode: body.mode,
+        attempts: body.attempts,
+        elapsedMs: body.elapsedMs
       });
-      entries.forEach((entry) => {
-        entry.points = calculatePoints(entry.attempts, entry.elapsedMs);
-      });
-      entries.sort((a, b) => b.points - a.points || a.attempts - b.attempts || a.elapsedMs - b.elapsedMs);
-      writeLeaderboard(entries);
-      json(res, 200, { entries: entries.slice(0, 50) });
+      json(res, 200, result);
       return;
     }
 
@@ -288,6 +343,15 @@ async function handleApi(req, res) {
         if (won && !player.solvedAt) {
           player.solvedAt = Date.now();
           player.elapsedMs = player.solvedAt - player.startedAt;
+          player.scoreRecorded = true;
+          recordLeaderboardScore({
+            gameId: `${room.code}:${playerId}`,
+            name: player.name,
+            mode: "duel",
+            attempts: player.progress.length,
+            elapsedMs: player.elapsedMs,
+            solvedAt: new Date(player.solvedAt).toISOString()
+          });
         }
         json(res, 200, {
           result,
