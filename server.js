@@ -184,7 +184,7 @@ function roomSnapshot(room, playerId) {
 function createPlayer(name) {
   return {
     name: String(name || "Player").slice(0, 24),
-    startedAt: Date.now(),
+    startedAt: null,
     progress: [],
     solvedAt: null,
     elapsedMs: null
@@ -336,6 +336,9 @@ async function handleApi(req, res) {
           json(res, 400, { error: "Not in this word list" });
           return;
         }
+        if (!player.startedAt) {
+          player.startedAt = Date.now();
+        }
         const result = scoreGuess(guess, room.answer);
         player.progress.push(result);
         const won = guess === room.answer;
@@ -357,6 +360,7 @@ async function handleApi(req, res) {
           result,
           won,
           finished,
+          startedAt: player.startedAt,
           attempts: player.progress.length,
           elapsedMs: player.elapsedMs,
           answer: finished ? room.answer : null,

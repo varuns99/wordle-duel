@@ -16,6 +16,7 @@ const state = {
   startTime: 0,
   elapsedMs: 0,
   timerId: null,
+  timerStarted: false,
   pollId: null,
   finished: false
 };
@@ -149,9 +150,10 @@ function resetGame({ mode, answer, room }) {
     guesses: Array.from({ length: 6 }, () => Array(5).fill("")),
     progress: [],
     keyRanks: {},
-    startTime: Date.now(),
+    startTime: 0,
     elapsedMs: 0,
     timerId: null,
+    timerStarted: false,
     pollId: null,
     finished: false
   });
@@ -164,17 +166,26 @@ function resetGame({ mode, answer, room }) {
   renderKeyboard();
   renderOpponent(null);
   setMessage(mode === "duel" ? "Share the room code. Your word starts now." : `Daily challenge ${dailyChallengeKey()}.`);
+  $("timer").textContent = formatTime(0);
   showView("gameView");
 
-  state.timerId = setInterval(updateTimer, 100);
   if (mode === "duel") {
     state.pollId = setInterval(pollRoom, 1000);
     pollRoom();
   }
 }
 
+function startTimer(startedAt = Date.now()) {
+  if (state.timerStarted) return;
+  state.timerStarted = true;
+  state.startTime = startedAt;
+  state.elapsedMs = Math.max(0, Date.now() - state.startTime);
+  updateTimer();
+  state.timerId = setInterval(updateTimer, 100);
+}
+
 function updateTimer() {
-  if (!state.finished) {
+  if (state.timerStarted && !state.finished) {
     state.elapsedMs = Date.now() - state.startTime;
   }
   $("timer").textContent = formatTime(state.elapsedMs);
@@ -277,6 +288,7 @@ async function submitGuess() {
     return;
   }
 
+  startTimer();
   const scored = scoreGuess(guess, state.answer);
   await applyGuessResult({ guess, scored, won: guess === state.answer, answer: state.answer });
 }
@@ -294,7 +306,8 @@ async function submitDuelGuess(guess) {
       setMessage(data.error || "Could not submit that guess.");
       return;
     }
-    state.elapsedMs = data.elapsedMs || state.elapsedMs;
+    if (data.startedAt) startTimer(data.startedAt);
+    if (data.elapsedMs) state.elapsedMs = data.elapsedMs;
     await applyGuessResult({
       guess,
       scored: data.result,
@@ -322,7 +335,7 @@ async function applyGuessResult({ guess, scored, won, answer }) {
 
   if (won || state.row === 5) {
     state.finished = true;
-    if (!state.elapsedMs) {
+    if (state.timerStarted && !state.elapsedMs) {
       state.elapsedMs = Date.now() - state.startTime;
     }
     clearInterval(state.timerId);
