@@ -559,7 +559,7 @@ body.light-theme .toggle-thumb {
 
   .opponent {
     position: static;
-    width: min(190px, 100%);
+    width: 100%;
     margin-bottom: 14px;
     padding: 10px;
   }
@@ -567,11 +567,13 @@ body.light-theme .toggle-thumb {
   .mini-grid {
     grid-template-columns: repeat(6, 1fr);
     gap: 0;
+    width: 100%;
   }
 
   .mini-row {
     gap: 3px;
-    padding: 0 5px;
+    min-width: 0;
+    padding: 0 4px;
     border-right: 1px solid rgba(174, 179, 168, 0.18);
     border-bottom: 0;
   }
