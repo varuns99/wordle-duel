@@ -565,26 +565,34 @@ body.light-theme .toggle-thumb {
   }
 
   .mini-grid {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: 1fr;
     gap: 0;
-    width: 100%;
+    width: auto;
   }
 
   .mini-row {
+    grid-template-columns: repeat(5, 12px);
+    justify-content: start;
     gap: 3px;
     min-width: 0;
-    padding: 0 4px;
-    border-right: 1px solid rgba(174, 179, 168, 0.18);
-    border-bottom: 0;
+    padding: 5px 0;
+    border-right: 0;
+    border-bottom: 1px solid rgba(174, 179, 168, 0.18);
   }
 
   .mini-row:first-child {
-    padding-left: 0;
+    padding-top: 0;
   }
 
   .mini-row:last-child {
-    padding-right: 0;
-    border-right: 0;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .mini-cell {
+    width: 12px;
+    height: 12px;
+    aspect-ratio: auto;
   }
 
   .board-wrap {
