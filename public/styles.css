@@ -559,19 +559,30 @@ body.light-theme .toggle-thumb {
 
   .opponent {
     position: static;
-    width: 100%;
+    width: min(190px, 100%);
     margin-bottom: 14px;
     padding: 10px;
   }
 
   .mini-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(6, 1fr);
     gap: 0;
   }
 
   .mini-row {
     gap: 3px;
-    padding: 4px 0;
+    padding: 0 5px;
+    border-right: 1px solid rgba(174, 179, 168, 0.18);
+    border-bottom: 0;
+  }
+
+  .mini-row:first-child {
+    padding-left: 0;
+  }
+
+  .mini-row:last-child {
+    padding-right: 0;
+    border-right: 0;
   }
 
   .board-wrap {
