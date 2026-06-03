@@ -254,12 +254,48 @@ body.light-theme .toggle-thumb {
   grid-template-columns: 48px 1fr auto;
   gap: 14px;
   align-items: center;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
 }
 
 .game-header h2 {
   margin: 0;
   font-size: 1.6rem;
+}
+
+.title-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.room-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 4px 5px 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.room-badge span {
+  color: var(--gold);
+  font-size: 1.12rem;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+}
+
+.room-badge button {
+  min-height: 26px;
+  padding: 0 9px;
+  border-radius: 6px;
+  background: var(--green);
+  border-color: var(--green);
+  color: #08150d;
+  font-size: 0.72rem;
+  font-weight: 900;
 }
 
 .icon-btn {
@@ -300,14 +336,25 @@ body.light-theme .toggle-thumb {
 
 .mini-grid {
   display: grid;
-  gap: 4px;
-  margin-top: 10px;
+  gap: 0;
+  margin-top: 8px;
 }
 
 .mini-row {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 4px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(174, 179, 168, 0.18);
+}
+
+.mini-row:first-child {
+  padding-top: 0;
+}
+
+.mini-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
 .mini-cell {
@@ -319,8 +366,8 @@ body.light-theme .toggle-thumb {
 .board-wrap {
   display: grid;
   justify-items: center;
-  gap: 18px;
-  padding-top: 8px;
+  gap: 10px;
+  padding-top: 0;
 }
 
 .message {
@@ -333,16 +380,16 @@ body.light-theme .toggle-thumb {
 .board {
   display: grid;
   grid-template-rows: repeat(6, 1fr);
-  gap: 8px;
-  width: min(420px, calc(100vw - 40px), calc((100vh - 250px) * 0.82));
-  min-width: 280px;
+  gap: 6px;
+  width: min(380px, calc(100vw - 40px), calc((100vh - 220px) * 0.82));
+  min-width: 260px;
   aspect-ratio: 5 / 6;
 }
 
 .row {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
+  gap: 6px;
 }
 
 .tile {
@@ -386,8 +433,9 @@ body.light-theme .toggle-thumb {
 
 .keyboard {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   width: min(680px, calc(100vw - 32px));
+  margin-top: 0;
 }
 
 .key-row {
@@ -485,6 +533,23 @@ body.light-theme .toggle-thumb {
     font-size: 1.28rem;
   }
 
+  .title-line {
+    gap: 8px;
+  }
+
+  .room-badge {
+    min-height: 30px;
+    padding: 3px 4px 3px 8px;
+  }
+
+  .room-badge span {
+    font-size: 0.98rem;
+  }
+
+  .room-badge button {
+    min-height: 24px;
+  }
+
   .timer {
     grid-column: 1 / -1;
     justify-self: stretch;
@@ -500,16 +565,17 @@ body.light-theme .toggle-thumb {
   }
 
   .mini-grid {
-    grid-template-columns: repeat(6, 1fr);
-    gap: 5px;
+    grid-template-columns: 1fr;
+    gap: 0;
   }
 
   .mini-row {
     gap: 3px;
+    padding: 4px 0;
   }
 
   .board-wrap {
-    gap: 12px;
+    gap: 8px;
     padding-top: 0;
   }
 
@@ -520,7 +586,7 @@ body.light-theme .toggle-thumb {
 
   .board {
     gap: 6px;
-    width: min(calc(100vw - 28px), calc((100vh - 245px) * 0.82), 390px);
+    width: min(calc(100vw - 28px), calc((100vh - 230px) * 0.82), 360px);
     min-width: 0;
   }
 
@@ -603,7 +669,7 @@ body.light-theme .toggle-thumb {
   }
 
   .board {
-    width: min(calc(100vw - 24px), calc((100vh - 235px) * 0.82));
+    width: min(calc(100vw - 24px), calc((100vh - 225px) * 0.82), 340px);
   }
 
   .keyboard {
@@ -657,7 +723,7 @@ body.light-theme .toggle-thumb {
   }
 
   .board {
-    width: min(calc(100vw - 28px), calc((100vh - 225px) * 0.82), 360px);
+    width: min(calc(100vw - 28px), calc((100vh - 215px) * 0.82), 330px);
   }
 
   .key {

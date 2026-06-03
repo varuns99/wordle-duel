@@ -48,7 +48,13 @@
           <button id="backBtn" class="icon-btn" aria-label="Back to menu">←</button>
           <div>
             <p id="modeLabel" class="eyebrow">Solo</p>
-            <h2 id="gameTitle">Wordle Duel</h2>
+            <div class="title-line">
+              <h2 id="gameTitle">Wordle Duel</h2>
+              <div id="roomBadge" class="room-badge hidden">
+                <span id="roomCodeDisplay"></span>
+                <button id="copyRoomBtn" type="button">Copy</button>
+              </div>
+            </div>
           </div>
           <div class="timer" id="timer">00:00.0</div>
         </header>

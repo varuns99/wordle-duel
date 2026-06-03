@@ -158,8 +158,11 @@ function resetGame({ mode, answer, room }) {
     finished: false
   });
 
-  $("modeLabel").textContent = mode === "duel" ? `Room ${room.code}` : "Solo";
-  $("gameTitle").textContent = mode === "duel" ? "Two-Player Duel" : "Solo Wordle";
+  $("modeLabel").textContent = mode === "duel" ? "Room" : "Solo";
+  $("gameTitle").textContent = mode === "duel" ? "Wordle Duel" : "Solo Wordle";
+  $("roomBadge").classList.toggle("hidden", mode !== "duel");
+  $("roomCodeDisplay").textContent = mode === "duel" ? room.code : "";
+  $("copyRoomBtn").textContent = "Copy";
   $("opponentPanel").classList.toggle("hidden", mode !== "duel");
   $("opponentName").textContent = "Waiting...";
   renderBoard();
@@ -535,6 +538,19 @@ function backToMenu() {
   showView("menuView");
 }
 
+async function copyRoomCode() {
+  if (!state.room?.code) return;
+  try {
+    await navigator.clipboard.writeText(state.room.code);
+    $("copyRoomBtn").textContent = "Copied";
+  } catch {
+    $("copyRoomBtn").textContent = state.room.code;
+  }
+  setTimeout(() => {
+    if (state.room?.code) $("copyRoomBtn").textContent = "Copy";
+  }, 1400);
+}
+
 $("soloBtn").addEventListener("click", () => resetGame({ mode: "solo", answer: dailyAnswer() }));
 $("createRoomBtn").addEventListener("click", createRoom);
 $("joinRoomBtn").addEventListener("click", showJoinRoomForm);
@@ -545,6 +561,7 @@ $("roomCodeInput").addEventListener("keydown", (event) => {
 $("leaderboardBtn").addEventListener("click", showLeaderboard);
 $("backBtn").addEventListener("click", backToMenu);
 $("leaderBackBtn").addEventListener("click", () => showView("menuView"));
+$("copyRoomBtn").addEventListener("click", copyRoomCode);
 document.addEventListener("keydown", (event) => {
   if ($("gameView").classList.contains("view-active")) handleKey(event.key);
 });
