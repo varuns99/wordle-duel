@@ -320,7 +320,7 @@ body.light-theme .toggle-thumb {
   top: 24px;
   right: 24px;
   z-index: 2;
-  width: 190px;
+  width: 300px;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -335,30 +335,39 @@ body.light-theme .toggle-thumb {
 }
 
 .mini-grid {
-  display: grid;
+  display: flex;
+  align-items: center;
   gap: 0;
   margin-top: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
 }
 
 .mini-row {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 4px;
-  padding: 5px 0;
-  border-bottom: 1px solid rgba(174, 179, 168, 0.18);
+  grid-template-columns: repeat(5, 7px);
+  flex: 0 0 auto;
+  gap: 3px;
+  padding: 0 7px 0 0;
+  margin-right: 7px;
+  border-right: 1px solid rgba(174, 179, 168, 0.22);
+  border-bottom: 0;
 }
 
 .mini-row:first-child {
-  padding-top: 0;
+  padding-left: 0;
 }
 
 .mini-row:last-child {
-  border-bottom: 0;
-  padding-bottom: 0;
+  border-right: 0;
+  margin-right: 0;
+  padding-right: 0;
 }
 
 .mini-cell {
   aspect-ratio: 1;
+  width: 7px;
+  height: 7px;
   border-radius: 3px;
   background: var(--panel-2);
 }
@@ -565,33 +574,35 @@ body.light-theme .toggle-thumb {
   }
 
   .mini-grid {
-    grid-template-columns: 1fr;
+    display: flex;
+    align-items: center;
     gap: 0;
-    width: auto;
+    width: 100%;
+    overflow-x: hidden;
   }
 
   .mini-row {
-    grid-template-columns: repeat(5, 12px);
-    justify-content: start;
+    grid-template-columns: repeat(5, 7px);
     gap: 3px;
-    min-width: 0;
-    padding: 5px 0;
-    border-right: 0;
-    border-bottom: 1px solid rgba(174, 179, 168, 0.18);
-  }
-
-  .mini-row:first-child {
-    padding-top: 0;
-  }
-
-  .mini-row:last-child {
-    padding-bottom: 0;
+    padding: 0 6px 0 0;
+    margin-right: 6px;
+    border-right: 1px solid rgba(174, 179, 168, 0.22);
     border-bottom: 0;
   }
 
+  .mini-row:first-child {
+    padding-left: 0;
+  }
+
+  .mini-row:last-child {
+    padding-right: 0;
+    margin-right: 0;
+    border-right: 0;
+  }
+
   .mini-cell {
-    width: 12px;
-    height: 12px;
+    width: 7px;
+    height: 7px;
     aspect-ratio: auto;
   }
 
