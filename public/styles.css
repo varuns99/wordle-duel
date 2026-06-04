@@ -102,6 +102,10 @@ button:disabled {
   font-weight: 900;
 }
 
+.secondary {
+  background: transparent;
+}
+
 .shell {
   width: min(1100px, 100%);
   min-height: 100vh;
@@ -189,6 +193,10 @@ input {
   display: grid;
   gap: 10px;
   margin: 16px 0 0;
+}
+
+.menu-step {
+  display: block;
 }
 
 .theme-control {
@@ -476,6 +484,31 @@ body.light-theme .toggle-thumb {
   overflow-x: auto;
 }
 
+.leader-section {
+  min-width: 620px;
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.leader-section:last-child {
+  margin-bottom: 0;
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.leader-section h3 {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 1.05rem;
+}
+
+.leader-empty {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 800;
+}
+
 .leader-row {
   display: grid;
   grid-template-columns: 42px 1fr 82px 72px 78px 96px;
@@ -723,6 +756,10 @@ body.light-theme .toggle-thumb {
 
   .leaderboard {
     padding: 10px;
+  }
+
+  .leader-section {
+    min-width: 0;
   }
 
   .leader-row {

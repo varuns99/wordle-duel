@@ -24,21 +24,35 @@
               <span id="themeLabel">Dark</span>
             </button>
           </div>
-          <label>
-            Display name
-            <input id="playerName" maxlength="24" placeholder="Player">
-          </label>
-          <div class="menu-actions">
-            <button id="soloBtn" class="primary">Daily Challenge</button>
-            <button id="createRoomBtn">Create 2P Room</button>
-            <button id="joinRoomBtn">Join Room</button>
-            <button id="leaderboardBtn">Leaderboard</button>
+          <div id="nameGate" class="menu-step">
+            <label>
+              Display name
+              <input id="playerName" maxlength="24" placeholder="Player">
+            </label>
+            <div class="menu-actions">
+              <button id="nameContinueBtn" class="primary">Continue</button>
+              <button id="skipNameBtn" class="secondary">Skip Name</button>
+            </div>
           </div>
-          <label id="roomJoinField" class="hidden">
-            Room code
-            <input id="roomCodeInput" maxlength="6" placeholder="ABC123">
-          </label>
-          <button id="submitJoinRoomBtn" class="positive hidden" type="button">Join</button>
+          <div id="mainMenuStep" class="menu-step hidden">
+            <div class="menu-actions">
+              <button id="soloBtn" class="primary">Daily Challenge</button>
+              <button id="duelMenuBtn">2 Player Duel</button>
+              <button id="leaderboardBtn">Leaderboard</button>
+            </div>
+          </div>
+          <div id="duelMenuStep" class="menu-step hidden">
+            <div class="menu-actions">
+              <button id="createRoomBtn" class="primary">Create Room</button>
+              <button id="joinRoomBtn">Join Room</button>
+              <button id="duelBackBtn" class="secondary">Back</button>
+            </div>
+            <label id="roomJoinField" class="hidden">
+              Room code
+              <input id="roomCodeInput" maxlength="6" placeholder="ABC123">
+            </label>
+            <button id="submitJoinRoomBtn" class="positive hidden" type="button">Join</button>
+          </div>
           <div id="menuStatus" class="menu-status" aria-live="polite"></div>
         </div>
       </section>

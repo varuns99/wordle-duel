@@ -32,6 +32,7 @@ const DAILY_CHALLENGE_OVERRIDES = {
   "2026-06-03": 2048
 };
 const THEME_STORAGE_KEY = "wordleDuelTheme";
+const PLAYER_NAME_STORAGE_KEY = "wordleDuelPlayerName";
 
 function apiUrl(path) {
   return `${API_BASE}/${path}`;
@@ -63,6 +64,46 @@ function showView(id) {
 
 function playerName() {
   return $("playerName").value.trim() || "Player";
+}
+
+function showMenuStep(stepId) {
+  for (const id of ["nameGate", "mainMenuStep", "duelMenuStep"]) {
+    $(id).classList.toggle("hidden", id !== stepId);
+  }
+  if (stepId !== "duelMenuStep") {
+    $("roomJoinField").classList.add("hidden");
+    $("submitJoinRoomBtn").classList.add("hidden");
+  }
+}
+
+function enterMainMenu(name) {
+  $("playerName").value = String(name || "Player").slice(0, 24);
+  localStorage.setItem(PLAYER_NAME_STORAGE_KEY, playerName());
+  showMenuStep("mainMenuStep");
+  $("menuStatus").textContent = WORDS.answers.length
+    ? `${WORDS.answers.length.toLocaleString()} answer words loaded.`
+    : "";
+}
+
+function skipName() {
+  enterMainMenu("Player");
+}
+
+function continueWithName() {
+  const name = $("playerName").value.trim();
+  if (!name) {
+    $("menuStatus").textContent = "Enter a name or skip.";
+    $("playerName").focus();
+    return;
+  }
+  enterMainMenu(name);
+}
+
+function showDuelMenu() {
+  showMenuStep("duelMenuStep");
+  $("menuStatus").textContent = state.backendAvailable
+    ? "Create a room or join with a code."
+    : "Two-player rooms need the Node backend or another realtime host.";
 }
 
 function formatTime(ms) {
@@ -490,12 +531,37 @@ async function showLeaderboard() {
     const localEntries = JSON.parse(localStorage.getItem("wordleDuelScores") || "[]");
     data = { entries: localEntries, players: aggregateLeaderboard(localEntries) };
   }
-  const players = data.players || aggregateLeaderboard(data.entries || []);
-  if (!players.length) {
+  const entries = data.entries || [];
+  const dailyPlayers = aggregateLeaderboard(entries.filter((entry) => normalizeMode(entry.mode) === "daily"));
+  const duelPlayers = aggregateLeaderboard(entries.filter((entry) => normalizeMode(entry.mode) === "duel"));
+  if (!dailyPlayers.length && !duelPlayers.length) {
     list.textContent = "No solved games yet.";
     return;
   }
   list.innerHTML = "";
+  renderLeaderboardSection(list, "Daily Challenge", dailyPlayers);
+  renderLeaderboardSection(list, "Duel", duelPlayers);
+}
+
+function normalizeMode(mode) {
+  const value = String(mode || "").toLowerCase();
+  return value === "duel" ? "duel" : "daily";
+}
+
+function renderLeaderboardSection(list, title, players) {
+  const section = document.createElement("section");
+  section.className = "leader-section";
+  const titleEl = document.createElement("h3");
+  titleEl.textContent = title;
+  section.append(titleEl);
+  if (!players.length) {
+    const empty = document.createElement("p");
+    empty.className = "leader-empty";
+    empty.textContent = "No scores yet.";
+    section.append(empty);
+    list.append(section);
+    return;
+  }
   const header = document.createElement("div");
   header.className = "leader-row leader-header";
   header.innerHTML = `
@@ -506,7 +572,7 @@ async function showLeaderboard() {
     <span>Best Time</span>
     <span class="mode-cell">Best Tries</span>
   `;
-  list.append(header);
+  section.append(header);
   players.slice(0, 20).forEach((player, index) => {
     const row = document.createElement("div");
     row.className = "leader-row";
@@ -518,8 +584,9 @@ async function showLeaderboard() {
       <span>${formatTime(player.bestElapsedMs)}</span>
       <span class="mode-cell">${player.bestAttempts}/6</span>
     `;
-    list.append(row);
+    section.append(row);
   });
+  list.append(section);
 }
 
 function escapeHtml(value) {
@@ -536,6 +603,7 @@ function backToMenu() {
   clearInterval(state.timerId);
   clearInterval(state.pollId);
   showView("menuView");
+  showMenuStep("mainMenuStep");
 }
 
 async function copyRoomCode() {
@@ -552,6 +620,18 @@ async function copyRoomCode() {
 }
 
 $("soloBtn").addEventListener("click", () => resetGame({ mode: "solo", answer: dailyAnswer() }));
+$("nameContinueBtn").addEventListener("click", continueWithName);
+$("skipNameBtn").addEventListener("click", skipName);
+$("playerName").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") continueWithName();
+});
+$("duelMenuBtn").addEventListener("click", showDuelMenu);
+$("duelBackBtn").addEventListener("click", () => {
+  showMenuStep("mainMenuStep");
+  $("menuStatus").textContent = WORDS.answers.length
+    ? `${WORDS.answers.length.toLocaleString()} answer words loaded.`
+    : "";
+});
 $("createRoomBtn").addEventListener("click", createRoom);
 $("joinRoomBtn").addEventListener("click", showJoinRoomForm);
 $("submitJoinRoomBtn").addEventListener("click", submitJoinRoom);
@@ -560,7 +640,10 @@ $("roomCodeInput").addEventListener("keydown", (event) => {
 });
 $("leaderboardBtn").addEventListener("click", showLeaderboard);
 $("backBtn").addEventListener("click", backToMenu);
-$("leaderBackBtn").addEventListener("click", () => showView("menuView"));
+$("leaderBackBtn").addEventListener("click", () => {
+  showView("menuView");
+  showMenuStep("mainMenuStep");
+});
 $("copyRoomBtn").addEventListener("click", copyRoomCode);
 document.addEventListener("keydown", (event) => {
   if ($("gameView").classList.contains("view-active")) handleKey(event.key);
@@ -572,7 +655,9 @@ async function loadWords() {
     WORDS.answers = data.answers;
     WORDS.validGuesses = new Set(data.validGuesses);
     $("soloBtn").disabled = false;
-    $("menuStatus").textContent = `${WORDS.answers.length.toLocaleString()} answer words loaded.`;
+    if (!$("nameGate").classList.contains("hidden")) {
+      $("menuStatus").textContent = `${WORDS.answers.length.toLocaleString()} answer words loaded.`;
+    }
     checkBackend();
   } catch {
     $("menuStatus").textContent = "Could not load the word list.";
@@ -614,4 +699,5 @@ $("createRoomBtn").disabled = true;
 $("joinRoomBtn").disabled = true;
 $("submitJoinRoomBtn").disabled = true;
 initTheme();
+$("playerName").value = localStorage.getItem(PLAYER_NAME_STORAGE_KEY) || "";
 loadWords();

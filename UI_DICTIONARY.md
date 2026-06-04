@@ -5,13 +5,20 @@ Use these terms when describing changes or bugs.
 ## Main Menu
 
 - **Main menu**: The first screen with the Wordle Duel title and menu panel.
+- **Name gate**: First menu step where the player enters or skips their display name.
 - **Brand block**: Left-side title area with "Wordle Duel", headline, and description.
 - **Menu panel**: Right-side control panel with theme, player name, and menu buttons.
+- **Menu step**: One state inside the menu panel, such as name entry, main options, or duel options.
 - **Theme toggle**: Dark/light mode switch above the player name field.
 - **Player name field**: Input where the player enters their display name.
+- **Continue button**: Saves the entered player name and opens the main menu.
+- **Skip Name button**: Uses the default player name and opens the main menu.
 - **Daily Challenge button**: Starts the solo daily puzzle.
-- **Create 2P Room button**: Creates a multiplayer room.
+- **2 Player Duel button**: Opens the duel submenu.
+- **Duel submenu**: Menu step with Create Room and Join Room options.
+- **Create Room button**: Creates a multiplayer room.
 - **Join Room button**: Reveals the room-code entry flow.
+- **Duel Back button**: Returns from the duel submenu to the main menu.
 - **Room code field**: Input where a player enters a room code.
 - **Join button**: Green button that joins a room using the code field.
 - **Leaderboard button**: Opens the leaderboard screen.
