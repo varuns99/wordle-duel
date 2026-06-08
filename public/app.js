@@ -163,6 +163,16 @@ function setMessage(text) {
   $("message").textContent = text;
 }
 
+function openHelp() {
+  $("helpModal").classList.remove("hidden");
+  $("closeHelpBtn").focus();
+}
+
+function closeHelp() {
+  $("helpModal").classList.add("hidden");
+  $("helpBtn").focus();
+}
+
 function dailyChallengeKey(date = new Date()) {
   return date.toISOString().slice(0, 10);
 }
@@ -202,6 +212,7 @@ function resetGame({ mode, answer, room }) {
   $("modeLabel").textContent = mode === "duel" ? "Room" : "Solo";
   $("gameTitle").textContent = mode === "duel" ? "Wordle Duel" : "Solo Wordle";
   $("roomBadge").classList.toggle("hidden", mode !== "duel");
+  $("helpBtn").classList.toggle("hidden", mode === "duel");
   $("roomCodeDisplay").textContent = mode === "duel" ? room.code : "";
   $("copyRoomBtn").textContent = "Copy";
   $("opponentPanel").classList.toggle("hidden", mode !== "duel");
@@ -645,7 +656,16 @@ $("leaderBackBtn").addEventListener("click", () => {
   showMenuStep("mainMenuStep");
 });
 $("copyRoomBtn").addEventListener("click", copyRoomCode);
+$("helpBtn").addEventListener("click", openHelp);
+$("closeHelpBtn").addEventListener("click", closeHelp);
+$("helpModal").addEventListener("click", (event) => {
+  if (event.target === $("helpModal")) closeHelp();
+});
 document.addEventListener("keydown", (event) => {
+  if (!$("helpModal").classList.contains("hidden")) {
+    if (event.key === "Escape") closeHelp();
+    return;
+  }
   if ($("gameView").classList.contains("view-active")) handleKey(event.key);
 });
 

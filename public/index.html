@@ -3,15 +3,16 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Wordle Duel</title>
+    <title>Word Sprint</title>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body data-word-list-url="words.json" data-api-base="api">
     <main class="shell">
       <section id="menuView" class="view view-active">
         <div class="brand-block">
-          <p class="eyebrow">Wordle Duel</p>
-          <h1>Race the word, not the letters.</h1>
+          <p class="eyebrow">Daily word race</p>
+          <h1>Word Sprint</h1>
+          <p class="menu-subtitle">A sharper daily word challenge.</p>
           <p class="lede">Play solo or start a two-player room where your opponent only sees your Wordle color trail and solve time.</p>
         </div>
         <div class="menu-panel">
@@ -70,7 +71,10 @@
               </div>
             </div>
           </div>
-          <div class="timer" id="timer">00:00.0</div>
+          <div class="header-actions">
+            <div class="timer" id="timer">00:00.0</div>
+            <button id="helpBtn" class="help-btn hidden" type="button" aria-label="How to play">?</button>
+          </div>
         </header>
 
         <aside id="opponentPanel" class="opponent hidden">
@@ -99,6 +103,22 @@
         <div id="leaderboardList" class="leaderboard"></div>
       </section>
     </main>
+
+    <div id="helpModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <div class="modal-panel">
+        <div class="modal-head">
+          <h2 id="helpTitle">How To Play</h2>
+          <button id="closeHelpBtn" class="text-button" type="button">Close</button>
+        </div>
+        <ul class="help-list">
+          <li>Guess the hidden 5-letter word in 6 tries.</li>
+          <li>Green means the letter is correct and in the right spot.</li>
+          <li>Yellow means the letter is in the word but in a different spot.</li>
+          <li>Dark grey means the letter is not in the word.</li>
+          <li>Your timer starts after your first valid guess.</li>
+        </ul>
+      </div>
+    </div>
 
     <script src="app.js"></script>
   </body>
