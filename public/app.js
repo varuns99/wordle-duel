@@ -45,6 +45,24 @@ function applyTheme(theme) {
   if ($("themeLabel")) $("themeLabel").textContent = isLight ? "Light" : "Dark";
 }
 
+function animateThemeChange(nextTheme) {
+  const wave = $("themeWave");
+  const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  if (!wave || prefersReducedMotion) {
+    applyTheme(nextTheme);
+    return;
+  }
+
+  wave.className = `theme-wave wave-${nextTheme}`;
+  requestAnimationFrame(() => {
+    wave.classList.add("wave-active");
+  });
+  setTimeout(() => applyTheme(nextTheme), 260);
+  setTimeout(() => {
+    wave.className = "theme-wave hidden";
+  }, 820);
+}
+
 function initTheme() {
   const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
   const preferredTheme = window.matchMedia?.("(prefers-color-scheme: light)").matches ? "light" : "dark";
@@ -52,7 +70,7 @@ function initTheme() {
   $("themeToggle")?.addEventListener("click", () => {
     const nextTheme = document.body.classList.contains("light-theme") ? "dark" : "light";
     localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
-    applyTheme(nextTheme);
+    animateThemeChange(nextTheme);
   });
 }
 

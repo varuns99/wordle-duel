@@ -331,6 +331,57 @@ body.light-theme .toggle-thumb {
   display: none !important;
 }
 
+.theme-wave {
+  position: fixed;
+  top: -18vmax;
+  right: -18vmax;
+  z-index: 30;
+  width: 42vmax;
+  height: 42vmax;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: scale(0);
+  opacity: 0;
+  background:
+    radial-gradient(circle, var(--wave-fill) 0 48%, var(--wave-fade) 70%, transparent 74%);
+  filter: blur(1px);
+}
+
+.theme-wave.wave-light {
+  --wave-fill: rgba(246, 243, 234, 0.98);
+  --wave-fade: rgba(246, 243, 234, 0.42);
+}
+
+.theme-wave.wave-dark {
+  --wave-fill: rgba(17, 19, 15, 0.98);
+  --wave-fade: rgba(17, 19, 15, 0.44);
+}
+
+.theme-wave.wave-active {
+  animation: themeWave 760ms ease-in-out forwards;
+}
+
+@keyframes themeWave {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  18% {
+    opacity: 0.9;
+  }
+
+  58% {
+    opacity: 0.82;
+    transform: scale(4.6);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(5.25);
+  }
+}
+
 .game-header {
   display: grid;
   grid-template-columns: 48px 1fr auto;
