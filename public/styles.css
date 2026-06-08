@@ -7,6 +7,7 @@
   --muted: #aeb3a8;
   --line: #3c4238;
   --green: #4f9d69;
+  --blue: #5f8ee6;
   --gold: #c6a44b;
   --gray: #3d443f;
   --key-unused: #737d73;
@@ -30,6 +31,7 @@ body.light-theme {
   --muted: #5f665c;
   --line: #cbc4b5;
   --green: #4f9d69;
+  --blue: #2f67c7;
   --gold: #b98f25;
   --gray: #5a625c;
   --key-unused: #d8d2c7;
@@ -102,8 +104,50 @@ button:disabled {
   font-weight: 900;
 }
 
-.secondary {
+.button-green {
+  background: var(--green);
+  border-color: var(--green);
+  color: #08150d;
+  font-weight: 900;
+}
+
+.button-blue {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #061120;
+  font-weight: 900;
+}
+
+.button-mustard {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #171104;
+  font-weight: 900;
+}
+
+.join-submit {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.secondary,
+.text-button {
   background: transparent;
+}
+
+.text-button {
+  min-height: 36px;
+  border-color: transparent;
+  color: var(--muted);
+  font-weight: 900;
+  padding-inline: 8px;
+}
+
+.text-button:hover {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text);
+  transform: none;
 }
 
 .shell {
