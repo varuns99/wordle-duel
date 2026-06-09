@@ -666,6 +666,37 @@ body.light-theme .toggle-thumb {
   text-align: center;
 }
 
+.tug-countdown {
+  grid-column: 1 / -1;
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 2px solid var(--gold);
+  border-radius: 50%;
+  color: var(--gold);
+  font-size: 1.15rem;
+  font-weight: 1000;
+  box-shadow: 0 0 18px rgba(198, 164, 75, 0.28);
+  animation: countdownPop 960ms ease-in-out infinite;
+}
+
+.tug-ready-btn {
+  grid-column: 1 / -1;
+  justify-self: center;
+  min-height: 34px;
+  min-width: 104px;
+  padding: 8px 18px;
+  font-size: 0.82rem;
+}
+
+.tug-ready-btn:disabled {
+  opacity: 0.62;
+  cursor: default;
+  transform: none;
+}
+
 .tug-panel.pulse .tug-mood,
 .tug-panel.pulse .tug-marker {
   animation: tugPop 440ms ease;
@@ -698,6 +729,17 @@ body.light-theme .toggle-thumb {
 
   to {
     filter: saturate(1.45) brightness(1.08);
+  }
+}
+
+@keyframes countdownPop {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.08);
   }
 }
 
@@ -1109,6 +1151,19 @@ body.light-theme .toggle-thumb {
     font-size: 0.72rem;
   }
 
+  .tug-countdown {
+    width: 30px;
+    height: 30px;
+    font-size: 1rem;
+  }
+
+  .tug-ready-btn {
+    min-height: 31px;
+    min-width: 92px;
+    padding: 7px 14px;
+    font-size: 0.76rem;
+  }
+
   .mini-grid {
     display: flex;
     align-items: center;
@@ -1354,6 +1409,19 @@ body.light-theme .toggle-thumb {
 
   .tug-round-status {
     font-size: 0.68rem;
+  }
+
+  .tug-countdown {
+    width: 28px;
+    height: 28px;
+    font-size: 0.94rem;
+  }
+
+  .tug-ready-btn {
+    min-height: 29px;
+    min-width: 86px;
+    padding: 6px 12px;
+    font-size: 0.72rem;
   }
 
   .message {

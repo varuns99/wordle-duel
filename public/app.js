@@ -18,6 +18,9 @@ const state = {
   timerId: null,
   timerStarted: false,
   pollId: null,
+  countdownId: null,
+  countdownEndsAt: null,
+  tugRoundActive: false,
   finished: false,
   animateRow: null,
   roomRoundNumber: 1,
@@ -257,10 +260,16 @@ function renderTugMeter(room) {
   const opponentName = room.opponent?.name || "Opponent";
   const target = room.targetScore || 5;
   const totalProgress = youScore + opponentScore;
-  const markerPercent = totalProgress ? 50 + ((youScore - opponentScore) / target) * 45 : 50;
+  const markerPercent = totalProgress ? 50 + ((opponentScore - youScore) / target) * 45 : 50;
   const clampedPercent = Math.max(5, Math.min(95, markerPercent));
   const youWon = room.matchWinnerId === room.playerId;
   const opponentWon = room.matchWinnerId && room.matchWinnerId !== room.playerId;
+  const ready = room.ready || {};
+  const youReady = Boolean(ready[room.playerId]);
+  const opponentReady = Boolean(room.opponent && opponentId && ready[opponentId]);
+  const countdownRemaining = room.countdownEndsAt ? room.countdownEndsAt - Date.now() : 0;
+  const countdownActive = countdownRemaining > 0;
+  state.tugRoundActive = Boolean(room.roundActive || (room.countdownEndsAt && countdownRemaining <= 0 && room.opponent && !room.matchWinnerId));
 
   $("youTugScore").textContent = youScore;
   $("opponentTugScore").textContent = opponentScore;
@@ -269,6 +278,10 @@ function renderTugMeter(room) {
   $("opponentMood").textContent = tugEmoji(opponentScore, youScore, opponentWon);
   $("tugMarker").style.left = `${clampedPercent}%`;
   $("tugPanel").classList.toggle("match-point", youScore >= 4 || opponentScore >= 4);
+  $("tugReadyBtn").classList.toggle("hidden", Boolean(room.matchWinnerId || !room.opponent || state.tugRoundActive || countdownActive));
+  $("tugReadyBtn").disabled = youReady;
+  $("tugReadyBtn").textContent = youReady ? "Ready" : "Ready";
+  renderTugCountdown(room.countdownEndsAt);
 
   if (room.matchWinnerId) {
     $("tugRoundStatus").textContent = youWon ? "You won Word Tug." : `${opponentName} won Word Tug.`;
@@ -282,11 +295,47 @@ function renderTugMeter(room) {
     setTimeout(() => $("tugPanel").classList.remove("pulse"), 520);
   } else if (!room.opponent) {
     $("tugRoundStatus").textContent = "Waiting for opponent. First to 5 wins.";
+  } else if (countdownActive) {
+    $("tugRoundStatus").textContent = `Starting in ${Math.ceil(countdownRemaining / 1000)}.`;
+  } else if (!youReady) {
+    $("tugRoundStatus").textContent = opponentReady ? "Opponent is ready. Tap Ready." : "Tap Ready when you are set.";
+  } else if (!opponentReady) {
+    $("tugRoundStatus").textContent = "Ready. Waiting for opponent.";
   } else if (state.finished) {
     $("tugRoundStatus").textContent = "Round locked. Waiting for opponent.";
   } else {
     $("tugRoundStatus").textContent = `Round ${room.roundNumber}. Fastest solve pulls.`;
   }
+}
+
+function renderTugCountdown(countdownEndsAt) {
+  clearInterval(state.countdownId);
+  state.countdownId = null;
+  state.countdownEndsAt = countdownEndsAt || null;
+  const countdown = $("tugCountdown");
+  if (!countdownEndsAt || countdownEndsAt <= Date.now()) {
+    countdown.classList.add("hidden");
+    if (countdownEndsAt && state.mode === "tug" && !state.timerStarted && !state.finished) startTimer(countdownEndsAt);
+    return;
+  }
+
+  const updateCountdown = () => {
+    const remaining = countdownEndsAt - Date.now();
+    if (remaining <= 0) {
+      countdown.classList.add("hidden");
+      clearInterval(state.countdownId);
+      state.countdownId = null;
+      state.tugRoundActive = true;
+      if (!state.timerStarted && !state.finished) startTimer(countdownEndsAt);
+      $("tugRoundStatus").textContent = `Round ${state.roomRoundNumber}. Fastest solve pulls.`;
+      return;
+    }
+    countdown.textContent = Math.ceil(remaining / 1000);
+    countdown.classList.remove("hidden");
+  };
+
+  updateCountdown();
+  state.countdownId = setInterval(updateCountdown, 120);
 }
 
 function hideResultCard() {
@@ -389,6 +438,7 @@ function dailyAnswer(date = new Date()) {
 function resetGame({ mode, answer, room }) {
   clearInterval(state.timerId);
   clearInterval(state.pollId);
+  clearInterval(state.countdownId);
   Object.assign(state, {
     answer,
     mode,
@@ -403,6 +453,9 @@ function resetGame({ mode, answer, room }) {
     timerId: null,
     timerStarted: false,
     pollId: null,
+    countdownId: null,
+    countdownEndsAt: null,
+    tugRoundActive: mode !== "tug",
     finished: false,
     animateRow: null,
     roomRoundNumber: room?.roundNumber || 1,
@@ -424,7 +477,11 @@ function resetGame({ mode, answer, room }) {
   renderKeyboard();
   renderOpponent(null);
   if (mode === "tug") renderTugMeter(room);
-  setMessage(isRoom ? "Share the room code. First valid guess starts your timer." : `Daily Sprint ${dailyChallengeKey()}.`);
+  setMessage(mode === "tug"
+    ? "Share the room code. Tap Ready when both players join."
+    : isRoom
+      ? "Share the room code. First valid guess starts your timer."
+      : `Daily Sprint ${dailyChallengeKey()}.`);
   $("timer").textContent = formatTime(0);
   showView("gameView");
 
@@ -488,6 +545,7 @@ function renderKeyboard() {
 function resetRoundFromRoom(room) {
   if (state.mode !== "tug" || room.roundNumber === state.roomRoundNumber) return;
   clearInterval(state.timerId);
+  clearInterval(state.countdownId);
   Object.assign(state, {
     row: 0,
     col: 0,
@@ -498,6 +556,9 @@ function resetRoundFromRoom(room) {
     elapsedMs: 0,
     timerId: null,
     timerStarted: false,
+    countdownId: null,
+    countdownEndsAt: null,
+    tugRoundActive: false,
     finished: false,
     animateRow: null,
     roomRoundNumber: room.roundNumber
@@ -506,6 +567,7 @@ function resetRoundFromRoom(room) {
   renderBoard();
   renderKeyboard();
   $("timer").textContent = formatTime(0);
+  $("tugCountdown").classList.add("hidden");
 }
 
 function keyButton(label, extra = "") {
@@ -540,6 +602,10 @@ function scoreGuess(guess, answer) {
 
 function handleKey(key) {
   if (state.finished) return;
+  if (state.mode === "tug" && !state.tugRoundActive) {
+    setMessage("Word Tug starts after both players are ready.");
+    return;
+  }
   if (key === "⌫" || key === "Backspace") {
     if (state.col > 0) {
       state.col -= 1;
@@ -560,6 +626,10 @@ function handleKey(key) {
 }
 
 async function submitGuess() {
+  if (state.mode === "tug" && !state.tugRoundActive) {
+    setMessage("Wait for the countdown.");
+    return;
+  }
   if (state.col < 5) {
     setMessage("Five letters first.");
     shakeBoard();
@@ -594,6 +664,7 @@ async function submitDuelGuess(guess) {
       setMessage(data.error || "Could not submit that guess.");
       return;
     }
+    state.room = data.room;
     if (data.startedAt) startTimer(data.startedAt);
     if (data.elapsedMs) state.elapsedMs = data.elapsedMs;
     await applyGuessResult({
@@ -696,6 +767,7 @@ async function pollRoom() {
     const response = await fetch(apiUrl(`rooms/${state.room.code}/${state.room.playerId}`));
     if (!response.ok) return;
     const data = await response.json();
+    state.room = data.room;
     renderOpponent(data.room.opponent);
     resetRoundFromRoom(data.room);
     renderTugMeter(data.room);
@@ -703,6 +775,25 @@ async function pollRoom() {
     setDuelStatus(data.room);
   } catch {
     clearInterval(state.pollId);
+  }
+}
+
+async function readyForTugRound() {
+  if (state.mode !== "tug" || !state.room) return;
+  try {
+    const response = await fetch(apiUrl(`rooms/${state.room.code}/${state.room.playerId}/ready`), {
+      method: "POST"
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setMessage(data.error || "Could not ready up.");
+      return;
+    }
+    state.room = data.room;
+    renderTugMeter(data.room);
+    setDuelStatus(data.room);
+  } catch {
+    setMessage("Could not reach the room server.");
   }
 }
 
@@ -958,6 +1049,7 @@ $("leaderBackBtn").addEventListener("click", () => {
   showMenuStep("mainMenuStep");
 });
 $("copyRoomBtn").addEventListener("click", copyRoomCode);
+$("tugReadyBtn").addEventListener("click", readyForTugRound);
 $("shareResultBtn").addEventListener("click", shareResult);
 $("resultLeaderboardBtn").addEventListener("click", () => {
   state.activeLeaderboardMode = modeLabel(state.mode);

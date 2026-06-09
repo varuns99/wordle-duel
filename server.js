@@ -193,6 +193,14 @@ function roomSnapshot(room, playerId) {
   const you = room.players[playerId];
   const opponentId = Object.keys(room.players).find((id) => id !== playerId);
   const opponent = opponentId ? room.players[opponentId] : null;
+  const ready = room.ready || {};
+  const playerIds = Object.keys(room.players);
+  const tugRoundActive = room.mode !== "tug" || (
+    playerIds.length === 2 &&
+    playerIds.every((id) => ready[id]) &&
+    room.countdownEndsAt &&
+    Date.now() >= room.countdownEndsAt
+  );
 
   return {
     code: room.code,
@@ -200,6 +208,10 @@ function roomSnapshot(room, playerId) {
     wordLength: room.answer.length,
     playerId,
     startedAt: you.startedAt,
+    serverNow: Date.now(),
+    ready,
+    countdownEndsAt: room.countdownEndsAt || null,
+    roundActive: tugRoundActive,
     playerCount: Object.keys(room.players).length,
     roundNumber: room.roundNumber || 1,
     targetScore: room.targetScore || TUG_TARGET_SCORE,
@@ -251,6 +263,8 @@ function resetPlayerRound(player) {
 function advanceTugRound(room) {
   room.roundNumber += 1;
   room.answer = nextRoomAnswer(room);
+  room.ready = {};
+  room.countdownEndsAt = null;
   for (const player of Object.values(room.players)) resetPlayerRound(player);
 }
 
@@ -421,6 +435,8 @@ async function handleApi(req, res) {
         history: [],
         lastRound: null,
         matchWinnerId: null,
+        ready: {},
+        countdownEndsAt: null,
         players: {
           [playerId]: createPlayer(body.name)
         }
@@ -471,10 +487,42 @@ async function handleApi(req, res) {
       const body = await readBody(req);
       const player = room.players[playerId];
 
+      if (action === "ready") {
+        if (room.mode !== "tug") {
+          json(res, 400, { error: "Ready is only available for Word Tug" });
+          return;
+        }
+        if (room.matchWinnerId) {
+          json(res, 409, { error: "Match is already finished" });
+          return;
+        }
+        room.ready = room.ready || {};
+        room.ready[playerId] = true;
+        const playerIds = Object.keys(room.players);
+        const allReady = playerIds.length === 2 && playerIds.every((id) => room.ready[id]);
+        if (allReady && !room.countdownEndsAt) {
+          room.countdownEndsAt = Date.now() + 5000;
+        }
+        json(res, 200, { room: roomSnapshot(room, playerId) });
+        return;
+      }
+
       if (action === "guess") {
         if (room.matchWinnerId) {
           json(res, 409, { error: "Match is already finished" });
           return;
+        }
+        if (room.mode === "tug") {
+          const playerIds = Object.keys(room.players);
+          const allReady = playerIds.length === 2 && playerIds.every((id) => room.ready?.[id]);
+          if (!allReady) {
+            json(res, 409, { error: "Both players need to be ready." });
+            return;
+          }
+          if (!room.countdownEndsAt || Date.now() < room.countdownEndsAt) {
+            json(res, 409, { error: "Countdown in progress." });
+            return;
+          }
         }
         if (player.finishedAt || player.progress.length >= 6) {
           json(res, 409, { error: "Game is already finished" });
@@ -486,7 +534,7 @@ async function handleApi(req, res) {
           return;
         }
         if (!player.startedAt) {
-          player.startedAt = Date.now();
+          player.startedAt = room.mode === "tug" ? room.countdownEndsAt : Date.now();
         }
         const submittedAnswer = room.answer;
         const result = scoreGuess(guess, room.answer);
