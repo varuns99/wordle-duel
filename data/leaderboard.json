@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "id": "1da2e5c2-4563-4d56-b9dd-2841adacf5a4",
+    "gameId": "C8CBAB:tug:707e732f-330d-4dbf-9d0f-8e6316e82a43",
+    "challengeKey": null,
+    "name": "Alpha",
+    "mode": "duel",
+    "attempts": 5,
+    "elapsedMs": 5119,
+    "points": 4949,
+    "solvedAt": "2026-06-09T21:57:50.317Z"
+  }
+]

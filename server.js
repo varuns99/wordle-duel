@@ -21,6 +21,7 @@ const dailyChallengeOverrides = {
   "2026-06-03": 2048
 };
 const TUG_TARGET_SCORE = 3;
+const TUG_COUNTDOWN_MS = Math.max(0, Number(process.env.TUG_COUNTDOWN_MS) || 5000);
 
 function ensureData() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -364,7 +365,8 @@ function scoreGuess(guess, answer) {
 }
 
 function sendStatic(req, res) {
-  const requestPath = req.url === "/" ? "/index.html" : decodeURIComponent(req.url.split("?")[0]);
+  const pathname = decodeURIComponent(req.url.split("?")[0]);
+  const requestPath = pathname === "/" ? "/index.html" : pathname;
   const safePath = path.normalize(requestPath).replace(/^([/\\])+/, "").replace(/^(\.\.[/\\])+/, "");
   const candidates = [
     path.join(__dirname, safePath),
@@ -515,7 +517,7 @@ async function handleApi(req, res) {
         const playerIds = Object.keys(room.players);
         const allReady = playerIds.length === 2 && playerIds.every((id) => room.ready[id]);
         if (allReady && !room.countdownEndsAt) {
-          room.countdownEndsAt = Date.now() + 5000;
+          room.countdownEndsAt = Date.now() + TUG_COUNTDOWN_MS;
           room.roundStartAt = room.countdownEndsAt;
         }
         json(res, 200, { room: roomSnapshot(room, playerId) });
@@ -543,6 +545,14 @@ async function handleApi(req, res) {
               json(res, 409, { error: "Countdown in progress." });
               return;
             }
+          }
+          const submittedRoundNumber = Number(body.roundNumber);
+          if (!Number.isInteger(submittedRoundNumber) || submittedRoundNumber !== (room.roundNumber || 1)) {
+            json(res, 409, {
+              error: "That round already ended.",
+              room: roomSnapshot(room, playerId)
+            });
+            return;
           }
         }
         if (player.finishedAt || player.progress.length >= 6) {

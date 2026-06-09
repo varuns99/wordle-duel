@@ -21,6 +21,9 @@ const state = {
   countdownId: null,
   countdownEndsAt: null,
   tugRoundActive: false,
+  tugNoticeText: "",
+  tugNoticeUntil: 0,
+  submittingGuess: false,
   finished: false,
   animateRow: null,
   roomRoundNumber: 1,
@@ -122,6 +125,7 @@ function showMenuStep(stepId) {
     $("roomJoinField").classList.add("hidden");
     $("submitJoinRoomBtn").classList.add("hidden");
   }
+  $("menuView").classList.remove("menu-join-active");
 }
 
 function enterMainMenu(name) {
@@ -221,6 +225,20 @@ function setMessage(text) {
   $("message").textContent = text;
 }
 
+function tugWordLabel(word) {
+  return word ? String(word).toUpperCase() : "the word";
+}
+
+function tugRoundNotice(room, opponentName) {
+  if (!room?.lastRound) return "";
+  const word = tugWordLabel(room.lastRound.word);
+  if (!room.lastRound.winnerId || !room.lastRound.points) {
+    return `No score on ${word}. Round ${room.roundNumber} begins.`;
+  }
+  const winnerName = room.lastRound.winnerId === room.playerId ? "You" : opponentName;
+  return `${winnerName} scored +${room.lastRound.points} on ${word}. Round ${room.roundNumber} begins.`;
+}
+
 function setDuelStatus(room) {
   if ((state.mode !== "duel" && state.mode !== "tug") || !room) return;
   if (state.mode === "tug") {
@@ -306,24 +324,33 @@ function renderTugMeter(room) {
     $("tugRoundStatus").textContent = youWon ? "You won Word Tug." : `${opponentName} won Word Tug.`;
   } else if (room.lastRound && state.lastSeenRoundResult !== `${room.lastRound.roundNumber}:${room.lastRound.winnerId}:${room.lastRound.points}`) {
     state.lastSeenRoundResult = `${room.lastRound.roundNumber}:${room.lastRound.winnerId}:${room.lastRound.points}`;
-    const winnerName = room.lastRound.winnerId === room.playerId ? "You" : room.lastRound.winnerId ? opponentName : "No one";
-    $("tugRoundStatus").textContent = room.lastRound.winnerId
-      ? `${winnerName} pulled the meter. Round ${room.roundNumber} begins.`
-      : `No pull. Round ${room.roundNumber} begins.`;
+    state.tugNoticeText = tugRoundNotice(room, opponentName);
+    state.tugNoticeUntil = Date.now() + 3600;
+    $("tugRoundStatus").textContent = state.tugNoticeText;
+    setMessage(state.tugNoticeText);
     $("tugPanel").classList.add("pulse");
     setTimeout(() => $("tugPanel").classList.remove("pulse"), 520);
   } else if (!room.opponent) {
-    $("tugRoundStatus").textContent = `Waiting for opponent. Pull to +${target} to win.`;
+    $("tugRoundStatus").textContent = `Waiting for opponent. Score to +${target} to win.`;
+    setMessage("Share the room code. Waiting for opponent.");
   } else if (firstRound && countdownActive) {
     $("tugRoundStatus").textContent = `Starting in ${Math.ceil(countdownRemaining / 1000)}.`;
+    setMessage(`Starting in ${Math.ceil(countdownRemaining / 1000)}.`);
   } else if (firstRound && !youReady) {
     $("tugRoundStatus").textContent = opponentReady ? "Opponent is ready. Tap Ready." : "Tap Ready when you are set.";
+    setMessage(opponentReady ? "Opponent is ready. Tap Ready." : "Tap Ready when you are set.");
   } else if (firstRound && !opponentReady) {
     $("tugRoundStatus").textContent = "Ready. Waiting for opponent.";
+    setMessage("Ready. Waiting for opponent.");
   } else if (state.finished) {
-    $("tugRoundStatus").textContent = "Preparing the next pull.";
+    $("tugRoundStatus").textContent = "Preparing the next round.";
+    setMessage("Preparing the next round.");
+  } else if (state.tugNoticeText && Date.now() < state.tugNoticeUntil) {
+    $("tugRoundStatus").textContent = state.tugNoticeText;
+    setMessage(state.tugNoticeText);
   } else {
-    $("tugRoundStatus").textContent = `Round ${room.roundNumber}. Fastest solve pulls.`;
+    $("tugRoundStatus").textContent = `Round ${room.roundNumber}. Fastest solve scores +1.`;
+    setMessage(`Round ${room.roundNumber}. Fastest solve wins +1.`);
   }
 }
 
@@ -346,7 +373,8 @@ function renderTugCountdown(countdownEndsAt) {
       state.countdownId = null;
       state.tugRoundActive = true;
       if (!state.timerStarted && !state.finished) startTimer(countdownEndsAt);
-      $("tugRoundStatus").textContent = `Round ${state.roomRoundNumber}. Fastest solve pulls.`;
+      $("tugRoundStatus").textContent = `Round ${state.roomRoundNumber}. Fastest solve scores +1.`;
+      setMessage(`Round ${state.roomRoundNumber}. Fastest solve wins +1.`);
       return;
     }
     countdown.textContent = Math.ceil(remaining / 1000);
@@ -415,7 +443,7 @@ function showTugMatchResult(room) {
   $("resultTitle").textContent = youWon ? "You won the tug" : `${opponentName} won the tug`;
   $("resultStats").innerHTML = `
     <span><strong>${youScore}</strong> You</span>
-    <span><strong>${history.length}</strong> pulls</span>
+    <span><strong>${history.length}</strong> rounds</span>
     <span><strong>${opponentScore}</strong> ${escapeHtml(opponentName)}</span>
   `;
   $("resultNote").textContent = summary;
@@ -473,8 +501,11 @@ function resetGame({ mode, answer, room }) {
     timerStarted: false,
     pollId: null,
     countdownId: null,
-    countdownEndsAt: null,
-    tugRoundActive: mode !== "tug",
+  countdownEndsAt: null,
+  tugNoticeText: "",
+  tugNoticeUntil: 0,
+  submittingGuess: false,
+  tugRoundActive: mode !== "tug",
     finished: false,
     animateRow: null,
     roomRoundNumber: room?.roundNumber || 1,
@@ -591,6 +622,7 @@ function resetRoundFromRoom(room) {
     countdownId: null,
     countdownEndsAt: null,
     tugRoundActive: Boolean(room.roundActive && !room.matchWinnerId),
+    submittingGuess: false,
     finished: false,
     animateRow: null,
     roomRoundNumber: room.roundNumber
@@ -601,7 +633,7 @@ function resetRoundFromRoom(room) {
   $("timer").textContent = formatTime(0);
   $("tugCountdown").classList.add("hidden");
   if (room.roundActive && !room.matchWinnerId) {
-    setMessage(`Round ${room.roundNumber}. Fastest solve pulls.`);
+    setMessage(`Round ${room.roundNumber}. Fastest solve wins +1.`);
   }
 }
 
@@ -610,6 +642,7 @@ function keyButton(label, extra = "") {
   button.className = `key ${extra}`;
   button.textContent = label;
   button.addEventListener("click", () => handleKey(label));
+  button.disabled = state.submittingGuess;
   const className = state.keyRanks[label.toLowerCase()];
   if (className) button.classList.add(className);
   return button;
@@ -646,6 +679,7 @@ function handleKey(key) {
     state.finished = false;
   }
   if (state.finished) return;
+  if (state.submittingGuess) return;
   if (state.mode === "tug" && !state.tugRoundActive) {
     setMessage("Word Tug starts after both players are ready.");
     return;
@@ -680,6 +714,7 @@ async function submitGuess() {
     state.finished = false;
   }
   if (state.finished) return;
+  if (state.submittingGuess) return;
   if (state.mode === "tug" && !state.tugRoundActive) {
     setMessage("Wait for the countdown.");
     return;
@@ -706,15 +741,25 @@ async function submitGuess() {
 }
 
 async function submitDuelGuess(guess) {
-  if (!state.room) return;
+  if (!state.room || state.submittingGuess) return;
+  state.submittingGuess = true;
+  renderKeyboard();
   try {
     const response = await fetch(apiUrl(`rooms/${state.room.code}/${state.room.playerId}/guess`), {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ guess })
+      body: JSON.stringify({ guess, roundNumber: state.roomRoundNumber })
     });
     const data = await response.json();
     if (!response.ok) {
+      if (data.room) {
+        state.room = data.room;
+        renderOpponent(data.room.opponent);
+        resetRoundFromRoom(data.room);
+        renderTugMeter(data.room);
+        showTugMatchResult(data.room);
+        setDuelStatus(data.room);
+      }
       setMessage(data.error || "Could not submit that guess.");
       return;
     }
@@ -735,6 +780,9 @@ async function submitDuelGuess(guess) {
     setDuelStatus(data.room);
   } catch {
     setMessage("Could not reach the room server.");
+  } finally {
+    state.submittingGuess = false;
+    renderKeyboard();
   }
 }
 
@@ -900,10 +948,12 @@ function showJoinRoomForm() {
     $("menuStatus").textContent = "Two-player rooms need the Node backend or another realtime host.";
     return;
   }
+  $("menuView").classList.add("menu-join-active");
   $("roomJoinField").classList.remove("hidden");
   $("submitJoinRoomBtn").classList.remove("hidden");
   $("menuStatus").textContent = "Enter a room code, then press Join.";
   $("roomCodeInput").focus();
+  $("menuStatus").scrollIntoView({ block: "nearest" });
 }
 
 async function submitJoinRoom() {
@@ -916,6 +966,7 @@ async function submitJoinRoom() {
   if (!code) {
     $("menuStatus").textContent = "Enter a room code first.";
     $("roomCodeInput").focus();
+    $("menuStatus").scrollIntoView({ block: "nearest" });
     return;
   }
   try {
@@ -928,12 +979,14 @@ async function submitJoinRoom() {
     if (!response.ok) {
       $("menuStatus").textContent = data.error || "Could not join that room.";
       $("roomCodeInput").select();
+      $("menuStatus").scrollIntoView({ block: "nearest" });
       return;
     }
     resetGame({ mode: data.room.mode === "tug" ? "tug" : "duel", answer: "", room: data.room });
   } catch {
     $("menuStatus").textContent = "Could not join. The backend is unavailable.";
     $("roomCodeInput").select();
+    $("menuStatus").scrollIntoView({ block: "nearest" });
   }
 }
 
