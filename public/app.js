@@ -245,9 +245,11 @@ function setDuelStatus(room) {
   setMessage("Opponent joined. First valid guess starts your timer.");
 }
 
-function tugEmoji(score, opponentScore, winner) {
+function tugEmoji(score, opponentScore, winner, target = 3) {
   if (winner) return "🏆";
-  if (opponentScore >= 4 && opponentScore > score) return "😰";
+  if (opponentScore >= target - 1 && opponentScore > score) return "😰";
+  if (score <= -(target - 1)) return "😬";
+  if (score < 0) return "😟";
   return ["😐", "🙂", "😏", "🔥", "😈", "🏆"][Math.min(5, Math.max(0, score))];
 }
 
@@ -258,9 +260,9 @@ function renderTugMeter(room) {
   const opponentId = Object.keys(scores).find((id) => id !== room.playerId);
   const opponentScore = opponentId ? scores[opponentId] || 0 : 0;
   const opponentName = room.opponent?.name || "Opponent";
-  const target = room.targetScore || 5;
-  const totalProgress = youScore + opponentScore;
-  const markerPercent = totalProgress ? 50 + ((opponentScore - youScore) / target) * 45 : 50;
+  const target = room.targetScore || 3;
+  const scoreDelta = youScore - opponentScore;
+  const markerPercent = 50 - (scoreDelta / (target * 2)) * 90;
   const clampedPercent = Math.max(5, Math.min(95, markerPercent));
   const youWon = room.matchWinnerId === room.playerId;
   const opponentWon = room.matchWinnerId && room.matchWinnerId !== room.playerId;
@@ -275,10 +277,10 @@ function renderTugMeter(room) {
   $("youTugScore").textContent = youScore;
   $("opponentTugScore").textContent = opponentScore;
   $("tugOpponentName").textContent = opponentName;
-  $("youMood").textContent = tugEmoji(youScore, opponentScore, youWon);
-  $("opponentMood").textContent = tugEmoji(opponentScore, youScore, opponentWon);
+  $("youMood").textContent = tugEmoji(youScore, opponentScore, youWon, target);
+  $("opponentMood").textContent = tugEmoji(opponentScore, youScore, opponentWon, target);
   $("tugMarker").style.left = `${clampedPercent}%`;
-  $("tugPanel").classList.toggle("match-point", youScore >= 4 || opponentScore >= 4);
+  $("tugPanel").classList.toggle("match-point", Math.max(youScore, opponentScore) >= target - 1);
   $("tugReadyBtn").classList.toggle("hidden", Boolean(room.matchWinnerId || !room.opponent || !firstRound || state.tugRoundActive || countdownActive));
   $("tugReadyBtn").disabled = youReady;
   $("tugReadyBtn").textContent = youReady ? "Ready" : "Ready";
@@ -293,12 +295,12 @@ function renderTugMeter(room) {
     state.lastSeenRoundResult = `${room.lastRound.roundNumber}:${room.lastRound.winnerId}:${room.lastRound.points}`;
     const winnerName = room.lastRound.winnerId === room.playerId ? "You" : room.lastRound.winnerId ? opponentName : "No one";
     $("tugRoundStatus").textContent = room.lastRound.winnerId
-      ? `${winnerName} pulled +${room.lastRound.points}. Round ${room.roundNumber} begins.`
+      ? `${winnerName} pulled the meter. Round ${room.roundNumber} begins.`
       : `No pull. Round ${room.roundNumber} begins.`;
     $("tugPanel").classList.add("pulse");
     setTimeout(() => $("tugPanel").classList.remove("pulse"), 520);
   } else if (!room.opponent) {
-    $("tugRoundStatus").textContent = "Waiting for opponent. First to 5 wins.";
+    $("tugRoundStatus").textContent = `Waiting for opponent. Pull to +${target} to win.`;
   } else if (firstRound && countdownActive) {
     $("tugRoundStatus").textContent = `Starting in ${Math.ceil(countdownRemaining / 1000)}.`;
   } else if (firstRound && !youReady) {

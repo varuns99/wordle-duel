@@ -20,7 +20,7 @@ const dailyChallengeOverrides = {
   "2026-06-02": 921,
   "2026-06-03": 2048
 };
-const TUG_TARGET_SCORE = 5;
+const TUG_TARGET_SCORE = 3;
 
 function ensureData() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -309,13 +309,19 @@ function maybeResolveTugRound(room) {
   };
 
   if (winnerId) {
+    const loserId = playerIds.find((id) => id !== winnerId);
     room.scores[winnerId] = Math.min(room.targetScore, (room.scores[winnerId] || 0) + points);
+    if (loserId) {
+      room.scores[loserId] = Math.max(-room.targetScore, (room.scores[loserId] || 0) - points);
+    }
     room.history.push({
       roundNumber: summary.roundNumber,
       word: summary.word,
       winnerId,
       winnerName: room.players[winnerId].name,
-      points
+      loserId,
+      points,
+      scores: { ...room.scores }
     });
     if (room.scores[winnerId] >= room.targetScore) {
       room.matchWinnerId = winnerId;
