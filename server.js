@@ -52,11 +52,13 @@ function calculatePoints(attempts, elapsedMs) {
 function normalizeScore(input) {
   const attempts = Math.min(6, Math.max(1, Number(input.attempts || 0)));
   const elapsedMs = Math.max(0, Number(input.elapsedMs || 0));
+  const mode = String(input.mode || "").toLowerCase() === "duel" ? "duel" : "daily";
   return {
     id: input.id || randomUUID(),
     gameId: input.gameId || null,
+    challengeKey: input.challengeKey || null,
     name: String(input.name || "Player").slice(0, 24),
-    mode: input.mode === "duel" || input.mode === "Duel" ? "Duel" : "Solo",
+    mode,
     attempts,
     elapsedMs,
     points: calculatePoints(attempts, elapsedMs),
@@ -106,6 +108,17 @@ function recordLeaderboardScore(score) {
   const entries = readLeaderboard().map(normalizeScore);
   const normalized = normalizeScore(score);
   if (normalized.gameId && entries.some((entry) => entry.gameId === normalized.gameId)) {
+    return { entries, players: aggregateLeaderboard(entries), saved: false };
+  }
+  if (
+    normalized.mode === "daily" &&
+    normalized.challengeKey &&
+    entries.some((entry) => (
+      entry.mode === "daily" &&
+      entry.challengeKey === normalized.challengeKey &&
+      entry.name.trim().toLowerCase() === normalized.name.trim().toLowerCase()
+    ))
+  ) {
     return { entries, players: aggregateLeaderboard(entries), saved: false };
   }
   entries.push(normalized);
@@ -175,7 +188,9 @@ function roomSnapshot(room, playerId) {
           progress: opponent.progress,
           attempts: opponent.progress.length,
           solvedAt: opponent.solvedAt,
-          elapsedMs: opponent.elapsedMs
+          elapsedMs: opponent.elapsedMs,
+          finishedAt: opponent.finishedAt,
+          won: opponent.won
         }
       : null
   };
@@ -187,7 +202,9 @@ function createPlayer(name) {
     startedAt: null,
     progress: [],
     solvedAt: null,
-    elapsedMs: null
+    finishedAt: null,
+    elapsedMs: null,
+    won: false
   };
 }
 
@@ -241,7 +258,9 @@ function sendStatic(req, res) {
       ".html": "text/html",
       ".css": "text/css",
       ".js": "text/javascript",
-      ".json": "application/json"
+      ".json": "application/json",
+      ".webmanifest": "application/manifest+json",
+      ".svg": "image/svg+xml"
     };
     res.writeHead(200, { "content-type": types[ext] || "application/octet-stream" });
     res.end(data);
@@ -262,7 +281,9 @@ async function handleApi(req, res) {
         name: body.name,
         mode: body.mode,
         attempts: body.attempts,
-        elapsedMs: body.elapsedMs
+        elapsedMs: body.elapsedMs,
+        gameId: body.gameId,
+        challengeKey: body.challengeKey
       });
       json(res, 200, result);
       return;
@@ -343,9 +364,13 @@ async function handleApi(req, res) {
         player.progress.push(result);
         const won = guess === room.answer;
         const finished = won || player.progress.length >= 6;
+        if (finished && !player.finishedAt) {
+          player.finishedAt = Date.now();
+          player.elapsedMs = player.finishedAt - player.startedAt;
+          player.won = won;
+        }
         if (won && !player.solvedAt) {
-          player.solvedAt = Date.now();
-          player.elapsedMs = player.solvedAt - player.startedAt;
+          player.solvedAt = player.finishedAt;
           player.scoreRecorded = true;
           recordLeaderboardScore({
             gameId: `${room.code}:${playerId}`,

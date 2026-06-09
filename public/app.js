@@ -18,7 +18,10 @@ const state = {
   timerId: null,
   timerStarted: false,
   pollId: null,
-  finished: false
+  finished: false,
+  leaderboardEntries: [],
+  activeLeaderboardMode: "daily",
+  lastResultText: ""
 };
 
 const rank = { absent: 1, present: 2, correct: 3 };
@@ -33,6 +36,8 @@ const DAILY_CHALLENGE_OVERRIDES = {
 };
 const THEME_STORAGE_KEY = "wordleDuelTheme";
 const PLAYER_NAME_STORAGE_KEY = "wordleDuelPlayerName";
+const LOCAL_SCORE_STORAGE_KEY = "wordleDuelScores";
+const SCORE_TIP_STORAGE_KEY = "wordleSprintScoreTipSeen";
 
 function apiUrl(path) {
   return `${API_BASE}/${path}`;
@@ -71,6 +76,15 @@ function initTheme() {
     const nextTheme = document.body.classList.contains("light-theme") ? "dark" : "light";
     localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
     animateThemeChange(nextTheme);
+  });
+}
+
+function initScoreTip() {
+  const hidden = localStorage.getItem(SCORE_TIP_STORAGE_KEY) === "true";
+  $("scoreTip").classList.toggle("hidden", hidden);
+  $("dismissScoreTipBtn").addEventListener("click", () => {
+    localStorage.setItem(SCORE_TIP_STORAGE_KEY, "true");
+    $("scoreTip").classList.add("hidden");
   });
 }
 
@@ -139,6 +153,14 @@ function calculatePoints(attempts, elapsedMs) {
   return Math.max(0, Math.round(10000 - safeAttempts * 1000 - seconds * 10));
 }
 
+function modeLabel(mode) {
+  return mode === "duel" ? "duel" : "daily";
+}
+
+function dailyGameId() {
+  return `daily:${dailyChallengeKey()}:${playerName().trim().toLowerCase() || "player"}`;
+}
+
 function aggregateLeaderboard(entries) {
   const players = new Map();
   for (const entry of entries) {
@@ -172,6 +194,7 @@ function aggregateLeaderboard(entries) {
   return [...players.values()]
     .map((player) => ({
       ...player,
+      averagePoints: Math.round(player.totalPoints / Math.max(1, player.games)),
       bestElapsedMs: Number.isFinite(player.bestElapsedMs) ? player.bestElapsedMs : 0
     }))
     .sort((a, b) => b.totalPoints - a.totalPoints || b.bestPoints - a.bestPoints || a.bestElapsedMs - b.bestElapsedMs);
@@ -179,6 +202,71 @@ function aggregateLeaderboard(entries) {
 
 function setMessage(text) {
   $("message").textContent = text;
+}
+
+function setDuelStatus(room) {
+  if (state.mode !== "duel" || !room) return;
+  const opponent = room.opponent;
+  if (!opponent) {
+    setMessage("Waiting for opponent. Share the room code.");
+    return;
+  }
+  if (state.finished && opponent.finishedAt) {
+    if (state.progress.length < opponent.attempts) {
+      setMessage("You won the sprint.");
+    } else if (state.progress.length > opponent.attempts) {
+      setMessage("Opponent won the sprint.");
+    } else if (state.elapsedMs && opponent.elapsedMs) {
+      setMessage(state.elapsedMs <= opponent.elapsedMs ? "You won the sprint." : "Opponent won the sprint.");
+    } else {
+      setMessage("Sprint finished.");
+    }
+    return;
+  }
+  if (opponent.finishedAt) {
+    setMessage(opponent.won ? "Opponent solved it. Keep sprinting." : "Opponent finished their attempts.");
+    return;
+  }
+  if (opponent.attempts > 0) {
+    setMessage(`Opponent is solving: ${opponent.attempts}/6 attempts used.`);
+    return;
+  }
+  setMessage("Opponent joined. First valid guess starts your timer.");
+}
+
+function hideResultCard() {
+  $("resultCard").classList.add("hidden");
+  $("resultStats").innerHTML = "";
+  $("resultNote").textContent = "";
+  $("shareResultBtn").textContent = "Share";
+  state.lastResultText = "";
+}
+
+function showResultCard({ won, answer, saved = true }) {
+  const attempts = state.progress.length;
+  const points = won ? calculatePoints(attempts, state.elapsedMs) : 0;
+  const title = won ? "Solved" : "Sprint over";
+  const mode = modeLabel(state.mode);
+  $("resultKicker").textContent = mode === "duel" ? "Sprint Duel" : `Daily Sprint ${dailyChallengeKey()}`;
+  $("resultTitle").textContent = title;
+  $("resultStats").innerHTML = `
+    <span><strong>${attempts}/6</strong> attempts</span>
+    <span><strong>${formatTime(state.elapsedMs)}</strong> time</span>
+    <span><strong>${points.toLocaleString()}</strong> points</span>
+  `;
+  $("resultNote").textContent = won
+    ? saved
+      ? "Score saved to the leaderboard."
+      : "Score already counted for this daily challenge."
+    : `The word was ${answer.toUpperCase()}.`;
+  state.lastResultText = [
+    "Word Sprint",
+    `${mode === "duel" ? "Sprint Duel" : "Daily Sprint"} ${won ? "solved" : "finished"}`,
+    `${attempts}/6 attempts`,
+    `${formatTime(state.elapsedMs)}`,
+    `${points.toLocaleString()} points`
+  ].join("\n");
+  $("resultCard").classList.remove("hidden");
 }
 
 function openHelp() {
@@ -227,18 +315,19 @@ function resetGame({ mode, answer, room }) {
     finished: false
   });
 
-  $("modeLabel").textContent = mode === "duel" ? "Room" : "Solo";
-  $("gameTitle").textContent = mode === "duel" ? "Wordle Duel" : "Solo Wordle";
+  $("modeLabel").textContent = mode === "duel" ? "Room" : "Daily";
+  $("gameTitle").textContent = mode === "duel" ? "Sprint Duel" : "Daily Sprint";
   $("roomBadge").classList.toggle("hidden", mode !== "duel");
   $("helpBtn").classList.toggle("hidden", mode === "duel");
   $("roomCodeDisplay").textContent = mode === "duel" ? room.code : "";
   $("copyRoomBtn").textContent = "Copy";
   $("opponentPanel").classList.toggle("hidden", mode !== "duel");
   $("opponentName").textContent = "Waiting...";
+  hideResultCard();
   renderBoard();
   renderKeyboard();
   renderOpponent(null);
-  setMessage(mode === "duel" ? "Share the room code. Your word starts now." : `Daily challenge ${dailyChallengeKey()}.`);
+  setMessage(mode === "duel" ? "Share the room code. First valid guess starts your timer." : `Daily Sprint ${dailyChallengeKey()}.`);
   $("timer").textContent = formatTime(0);
   showView("gameView");
 
@@ -278,6 +367,8 @@ function renderBoard() {
       if (state.progress[r]) tile.classList.add(state.progress[r][c]);
       row.append(tile);
     }
+    if (state.progress[r]) row.classList.add("evaluated");
+    if (state.progress[r] && r === state.progress.length - 1) row.classList.add("recent");
     $("board").append(row);
   }
 }
@@ -349,11 +440,13 @@ function handleKey(key) {
 async function submitGuess() {
   if (state.col < 5) {
     setMessage("Five letters first.");
+    shakeBoard();
     return;
   }
   const guess = state.guesses[state.row].join("").toLowerCase();
   if (!WORDS.validGuesses.has(guess)) {
     setMessage("Not in this word list.");
+    shakeBoard();
     return;
   }
   if (state.mode === "duel") {
@@ -388,9 +481,18 @@ async function submitDuelGuess(guess) {
       answer: data.answer
     });
     renderOpponent(data.room.opponent);
+    setDuelStatus(data.room);
   } catch {
     setMessage("Could not reach the room server.");
   }
+}
+
+function shakeBoard() {
+  $("board").classList.remove("shake");
+  requestAnimationFrame(() => {
+    $("board").classList.add("shake");
+  });
+  setTimeout(() => $("board").classList.remove("shake"), 360);
 }
 
 async function applyGuessResult({ guess, scored, won, answer }) {
@@ -414,7 +516,8 @@ async function applyGuessResult({ guess, scored, won, answer }) {
     clearInterval(state.timerId);
     updateTimer();
     setMessage(won ? `Solved in ${state.row + 1} guesses.` : `The word was ${answer.toUpperCase()}.`);
-    if (won && state.mode !== "duel") saveLeaderboard();
+    const saved = won && state.mode !== "duel" ? await saveLeaderboard() : true;
+    showResultCard({ won, answer, saved });
     return;
   }
 
@@ -426,10 +529,12 @@ async function applyGuessResult({ guess, scored, won, answer }) {
 async function saveLeaderboard() {
   const entry = {
     name: playerName(),
-    mode: state.mode,
+    mode: modeLabel(state.mode),
     attempts: state.progress.length,
     elapsedMs: state.elapsedMs,
-    points: calculatePoints(state.progress.length, state.elapsedMs)
+    points: calculatePoints(state.progress.length, state.elapsedMs),
+    gameId: state.mode === "duel" ? null : dailyGameId(),
+    challengeKey: state.mode === "duel" ? null : dailyChallengeKey()
   };
   try {
     const response = await fetch(apiUrl("leaderboard"), {
@@ -438,14 +543,23 @@ async function saveLeaderboard() {
       body: JSON.stringify(entry)
     });
     if (!response.ok) throw new Error("Leaderboard API unavailable");
+    const data = await response.json();
+    return data.saved !== false;
   } catch {
-    const localEntries = JSON.parse(localStorage.getItem("wordleDuelScores") || "[]");
+    const localEntries = JSON.parse(localStorage.getItem(LOCAL_SCORE_STORAGE_KEY) || "[]");
+    const alreadySaved = localEntries.some((score) => (
+      normalizeMode(score.mode) === "daily" &&
+      score.challengeKey === entry.challengeKey &&
+      String(score.name || "").trim().toLowerCase() === entry.name.trim().toLowerCase()
+    ));
+    if (alreadySaved) return false;
     localEntries.push({ ...entry, solvedAt: new Date().toISOString() });
     localEntries.forEach((score) => {
       score.points = calculatePoints(score.attempts, score.elapsedMs);
     });
     localEntries.sort((a, b) => b.points - a.points || a.attempts - b.attempts || a.elapsedMs - b.elapsedMs);
-    localStorage.setItem("wordleDuelScores", JSON.stringify(localEntries.slice(0, 50)));
+    localStorage.setItem(LOCAL_SCORE_STORAGE_KEY, JSON.stringify(localEntries.slice(0, 50)));
+    return true;
   }
 }
 
@@ -456,6 +570,7 @@ async function pollRoom() {
     if (!response.ok) return;
     const data = await response.json();
     renderOpponent(data.room.opponent);
+    setDuelStatus(data.room);
   } catch {
     clearInterval(state.pollId);
   }
@@ -557,19 +672,11 @@ async function showLeaderboard() {
     if (!response.ok) throw new Error("Leaderboard API unavailable");
     data = await response.json();
   } catch {
-    const localEntries = JSON.parse(localStorage.getItem("wordleDuelScores") || "[]");
+    const localEntries = JSON.parse(localStorage.getItem(LOCAL_SCORE_STORAGE_KEY) || "[]");
     data = { entries: localEntries, players: aggregateLeaderboard(localEntries) };
   }
-  const entries = data.entries || [];
-  const dailyPlayers = aggregateLeaderboard(entries.filter((entry) => normalizeMode(entry.mode) === "daily"));
-  const duelPlayers = aggregateLeaderboard(entries.filter((entry) => normalizeMode(entry.mode) === "duel"));
-  if (!dailyPlayers.length && !duelPlayers.length) {
-    list.textContent = "No solved games yet.";
-    return;
-  }
-  list.innerHTML = "";
-  renderLeaderboardSection(list, "Daily Challenge", dailyPlayers);
-  renderLeaderboardSection(list, "Duel", duelPlayers);
+  state.leaderboardEntries = data.entries || [];
+  renderLeaderboard();
 }
 
 function normalizeMode(mode) {
@@ -598,8 +705,9 @@ function renderLeaderboardSection(list, title, players) {
     <span>Name</span>
     <span>Total</span>
     <span>Games</span>
-    <span>Best Time</span>
-    <span class="mode-cell">Best Tries</span>
+    <span>Avg</span>
+    <span>Best</span>
+    <span class="mode-cell">Last</span>
   `;
   section.append(header);
   players.slice(0, 20).forEach((player, index) => {
@@ -610,12 +718,39 @@ function renderLeaderboardSection(list, title, players) {
       <strong>${escapeHtml(player.name)}</strong>
       <span>${player.totalPoints.toLocaleString()}</span>
       <span>${player.games}</span>
-      <span>${formatTime(player.bestElapsedMs)}</span>
-      <span class="mode-cell">${player.bestAttempts}/6</span>
+      <span>${player.averagePoints.toLocaleString()}</span>
+      <span>${player.bestAttempts}/6 · ${formatTime(player.bestElapsedMs)}</span>
+      <span class="mode-cell">${formatDate(player.lastSolvedAt)}</span>
     `;
     section.append(row);
   });
   list.append(section);
+}
+
+function renderLeaderboard() {
+  const list = $("leaderboardList");
+  $("dailyTabBtn").classList.toggle("active", state.activeLeaderboardMode === "daily");
+  $("duelTabBtn").classList.toggle("active", state.activeLeaderboardMode === "duel");
+  $("dailyTabBtn").setAttribute("aria-selected", String(state.activeLeaderboardMode === "daily"));
+  $("duelTabBtn").setAttribute("aria-selected", String(state.activeLeaderboardMode === "duel"));
+  const title = state.activeLeaderboardMode === "duel" ? "Sprint Duel" : "Daily Sprint";
+  const players = aggregateLeaderboard(
+    state.leaderboardEntries.filter((entry) => normalizeMode(entry.mode) === state.activeLeaderboardMode)
+  );
+  list.innerHTML = "";
+  renderLeaderboardSection(list, title, players);
+}
+
+function setLeaderboardMode(mode) {
+  state.activeLeaderboardMode = mode;
+  renderLeaderboard();
+}
+
+function formatDate(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 function escapeHtml(value) {
@@ -631,6 +766,7 @@ function escapeHtml(value) {
 function backToMenu() {
   clearInterval(state.timerId);
   clearInterval(state.pollId);
+  hideResultCard();
   showView("menuView");
   showMenuStep("mainMenuStep");
 }
@@ -645,6 +781,23 @@ async function copyRoomCode() {
   }
   setTimeout(() => {
     if (state.room?.code) $("copyRoomBtn").textContent = "Copy";
+  }, 1400);
+}
+
+async function shareResult() {
+  if (!state.lastResultText) return;
+  try {
+    if (navigator.share) {
+      await navigator.share({ text: state.lastResultText });
+      return;
+    }
+    await navigator.clipboard.writeText(state.lastResultText);
+    $("shareResultBtn").textContent = "Copied";
+  } catch {
+    $("shareResultBtn").textContent = "Copy failed";
+  }
+  setTimeout(() => {
+    $("shareResultBtn").textContent = "Share";
   }, 1400);
 }
 
@@ -674,6 +827,13 @@ $("leaderBackBtn").addEventListener("click", () => {
   showMenuStep("mainMenuStep");
 });
 $("copyRoomBtn").addEventListener("click", copyRoomCode);
+$("shareResultBtn").addEventListener("click", shareResult);
+$("resultLeaderboardBtn").addEventListener("click", () => {
+  state.activeLeaderboardMode = modeLabel(state.mode);
+  showLeaderboard();
+});
+$("dailyTabBtn").addEventListener("click", () => setLeaderboardMode("daily"));
+$("duelTabBtn").addEventListener("click", () => setLeaderboardMode("duel"));
 $("helpBtn").addEventListener("click", openHelp);
 $("closeHelpBtn").addEventListener("click", closeHelp);
 $("helpModal").addEventListener("click", (event) => {
@@ -728,7 +888,7 @@ async function checkBackend() {
   $("createRoomBtn").title = state.backendAvailable ? "" : "Requires the Node backend or a realtime hosting service.";
   $("joinRoomBtn").title = state.backendAvailable ? "" : "Requires the Node backend or a realtime hosting service.";
   if (!state.backendAvailable && WORDS.answers.length) {
-    $("menuStatus").textContent = `${WORDS.answers.length.toLocaleString()} answer words loaded. Solo mode is ready.`;
+    $("menuStatus").textContent = `${WORDS.answers.length.toLocaleString()} answer words loaded. Daily Sprint is ready.`;
   }
 }
 
@@ -737,5 +897,6 @@ $("createRoomBtn").disabled = true;
 $("joinRoomBtn").disabled = true;
 $("submitJoinRoomBtn").disabled = true;
 initTheme();
+initScoreTip();
 $("playerName").value = localStorage.getItem(PLAYER_NAME_STORAGE_KEY) || "";
 loadWords();

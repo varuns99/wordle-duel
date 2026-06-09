@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Word Sprint</title>
+    <meta name="theme-color" content="#11130f">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body data-word-list-url="words.json" data-api-base="api">
@@ -25,13 +28,17 @@
               <span id="themeLabel">Dark</span>
             </button>
           </div>
+          <div id="scoreTip" class="score-tip hidden">
+            <p><strong>Scoring</strong> rewards faster solves and fewer attempts. Daily Sprint scores count once per name each day.</p>
+            <button id="dismissScoreTipBtn" class="text-button" type="button">Got it</button>
+          </div>
           <div id="nameGate" class="menu-step">
             <label>
               Display name
               <input id="playerName" maxlength="24" placeholder="Player">
             </label>
             <div class="menu-actions">
-              <button id="nameContinueBtn" class="primary">Continue</button>
+              <button id="nameContinueBtn" class="button-green">Continue</button>
               <button id="skipNameBtn" class="text-button">Skip Name</button>
             </div>
           </div>
@@ -62,9 +69,9 @@
         <header class="game-header">
           <button id="backBtn" class="icon-btn" aria-label="Back to menu">←</button>
           <div>
-            <p id="modeLabel" class="eyebrow">Solo</p>
+            <p id="modeLabel" class="eyebrow">Daily</p>
             <div class="title-line">
-              <h2 id="gameTitle">Wordle Duel</h2>
+              <h2 id="gameTitle">Sprint Duel</h2>
               <div id="roomBadge" class="room-badge hidden">
                 <span id="roomCodeDisplay"></span>
                 <button id="copyRoomBtn" type="button">Copy</button>
@@ -88,6 +95,16 @@
         <section class="board-wrap">
           <div id="message" class="message">Guess the 5-letter word.</div>
           <div id="board" class="board" aria-label="Wordle board"></div>
+          <div id="resultCard" class="result-card hidden" aria-live="polite">
+            <p id="resultKicker" class="eyebrow">Result</p>
+            <h3 id="resultTitle">Solved</h3>
+            <div id="resultStats" class="result-stats"></div>
+            <p id="resultNote" class="result-note"></p>
+            <div class="result-actions">
+              <button id="shareResultBtn" class="button-blue" type="button">Share</button>
+              <button id="resultLeaderboardBtn" class="button-mustard" type="button">Leaderboard</button>
+            </div>
+          </div>
           <div id="keyboard" class="keyboard"></div>
         </section>
       </section>
@@ -100,6 +117,10 @@
             <h2>Leaderboard</h2>
           </div>
         </header>
+        <div class="leader-tabs" role="tablist" aria-label="Leaderboard category">
+          <button id="dailyTabBtn" class="leader-tab active" type="button" role="tab" aria-selected="true">Daily</button>
+          <button id="duelTabBtn" class="leader-tab" type="button" role="tab" aria-selected="false">Duel</button>
+        </div>
         <div id="leaderboardList" class="leaderboard"></div>
       </section>
     </main>

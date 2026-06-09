@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Word Sprint icon">
+  <rect width="512" height="512" rx="112" fill="#11130f"/>
+  <rect x="72" y="92" width="108" height="108" rx="18" fill="#4f9d69"/>
+  <rect x="202" y="92" width="108" height="108" rx="18" fill="#c6a44b"/>
+  <rect x="332" y="92" width="108" height="108" rx="18" fill="#252a22" stroke="#3c4238" stroke-width="10"/>
+  <rect x="72" y="222" width="108" height="108" rx="18" fill="#252a22" stroke="#3c4238" stroke-width="10"/>
+  <rect x="202" y="222" width="108" height="108" rx="18" fill="#4f9d69"/>
+  <rect x="332" y="222" width="108" height="108" rx="18" fill="#252a22" stroke="#3c4238" stroke-width="10"/>
+  <path d="M92 402h258" stroke="#f4f1e8" stroke-width="32" stroke-linecap="round"/>
+  <path d="M352 360l68 42-68 42" fill="none" stroke="#f4f1e8" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
