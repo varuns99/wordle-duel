@@ -1,4 +1,4 @@
-const CACHE_NAME = "word-sprint-v0.5.8";
+const CACHE_NAME = "word-sprint-v0.5.9";
 const APP_SHELL = [
   "/",
   "/index.html",

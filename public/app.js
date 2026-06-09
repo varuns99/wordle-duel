@@ -265,6 +265,9 @@ function tugEmoji(score, opponentScore, winner, target = 3) {
 
 function renderTugMeter(room) {
   if (state.mode !== "tug" || !room) return;
+  if (room.roundActive && !room.matchWinnerId && !room.you?.finishedAt && state.finished) {
+    state.finished = false;
+  }
   const scores = room.scores || {};
   const youScore = scores[room.playerId] || 0;
   const opponentId = Object.keys(scores).find((id) => id !== room.playerId);
@@ -318,7 +321,7 @@ function renderTugMeter(room) {
   } else if (firstRound && !opponentReady) {
     $("tugRoundStatus").textContent = "Ready. Waiting for opponent.";
   } else if (state.finished) {
-    $("tugRoundStatus").textContent = "Round locked. Waiting for opponent.";
+    $("tugRoundStatus").textContent = "Preparing the next pull.";
   } else {
     $("tugRoundStatus").textContent = `Round ${room.roundNumber}. Fastest solve pulls.`;
   }
@@ -558,8 +561,21 @@ function renderKeyboard() {
   }
 }
 
+function shouldResetTugBoard(room) {
+  if (state.mode !== "tug" || !room) return false;
+  if (room.roundNumber !== state.roomRoundNumber) return true;
+  const serverProgress = room.you?.progress || [];
+  return Boolean(
+    room.roundActive &&
+    !room.matchWinnerId &&
+    !room.you?.finishedAt &&
+    state.finished &&
+    serverProgress.length === 0
+  );
+}
+
 function resetRoundFromRoom(room) {
-  if (state.mode !== "tug" || room.roundNumber === state.roomRoundNumber) return;
+  if (!shouldResetTugBoard(room)) return;
   clearInterval(state.timerId);
   clearInterval(state.countdownId);
   Object.assign(state, {
@@ -574,7 +590,7 @@ function resetRoundFromRoom(room) {
     timerStarted: false,
     countdownId: null,
     countdownEndsAt: null,
-    tugRoundActive: false,
+    tugRoundActive: Boolean(room.roundActive && !room.matchWinnerId),
     finished: false,
     animateRow: null,
     roomRoundNumber: room.roundNumber
@@ -584,6 +600,9 @@ function resetRoundFromRoom(room) {
   renderKeyboard();
   $("timer").textContent = formatTime(0);
   $("tugCountdown").classList.add("hidden");
+  if (room.roundActive && !room.matchWinnerId) {
+    setMessage(`Round ${room.roundNumber}. Fastest solve pulls.`);
+  }
 }
 
 function keyButton(label, extra = "") {
@@ -617,6 +636,15 @@ function scoreGuess(guess, answer) {
 }
 
 function handleKey(key) {
+  if (
+    state.mode === "tug" &&
+    state.finished &&
+    state.room?.roundActive &&
+    !state.room?.matchWinnerId &&
+    !state.room?.you?.finishedAt
+  ) {
+    state.finished = false;
+  }
   if (state.finished) return;
   if (state.mode === "tug" && !state.tugRoundActive) {
     setMessage("Word Tug starts after both players are ready.");
@@ -642,6 +670,16 @@ function handleKey(key) {
 }
 
 async function submitGuess() {
+  if (
+    state.mode === "tug" &&
+    state.finished &&
+    state.room?.roundActive &&
+    !state.room?.matchWinnerId &&
+    !state.room?.you?.finishedAt
+  ) {
+    state.finished = false;
+  }
+  if (state.finished) return;
   if (state.mode === "tug" && !state.tugRoundActive) {
     setMessage("Wait for the countdown.");
     return;
