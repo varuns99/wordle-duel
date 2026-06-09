@@ -269,7 +269,8 @@ function renderTugMeter(room) {
   const opponentReady = Boolean(room.opponent && opponentId && ready[opponentId]);
   const countdownRemaining = room.countdownEndsAt ? room.countdownEndsAt - Date.now() : 0;
   const countdownActive = countdownRemaining > 0;
-  state.tugRoundActive = Boolean(room.roundActive || (room.countdownEndsAt && countdownRemaining <= 0 && room.opponent && !room.matchWinnerId));
+  const firstRound = room.roundNumber === 1;
+  state.tugRoundActive = Boolean(room.roundActive || (!firstRound && room.roundStartAt && room.opponent && !room.matchWinnerId));
 
   $("youTugScore").textContent = youScore;
   $("opponentTugScore").textContent = opponentScore;
@@ -278,10 +279,13 @@ function renderTugMeter(room) {
   $("opponentMood").textContent = tugEmoji(opponentScore, youScore, opponentWon);
   $("tugMarker").style.left = `${clampedPercent}%`;
   $("tugPanel").classList.toggle("match-point", youScore >= 4 || opponentScore >= 4);
-  $("tugReadyBtn").classList.toggle("hidden", Boolean(room.matchWinnerId || !room.opponent || state.tugRoundActive || countdownActive));
+  $("tugReadyBtn").classList.toggle("hidden", Boolean(room.matchWinnerId || !room.opponent || !firstRound || state.tugRoundActive || countdownActive));
   $("tugReadyBtn").disabled = youReady;
   $("tugReadyBtn").textContent = youReady ? "Ready" : "Ready";
-  renderTugCountdown(room.countdownEndsAt);
+  renderTugCountdown(firstRound ? room.countdownEndsAt : null);
+  if (!firstRound && room.roundStartAt && !state.timerStarted && !state.finished && !room.matchWinnerId) {
+    startTimer(room.roundStartAt);
+  }
 
   if (room.matchWinnerId) {
     $("tugRoundStatus").textContent = youWon ? "You won Word Tug." : `${opponentName} won Word Tug.`;
@@ -295,11 +299,11 @@ function renderTugMeter(room) {
     setTimeout(() => $("tugPanel").classList.remove("pulse"), 520);
   } else if (!room.opponent) {
     $("tugRoundStatus").textContent = "Waiting for opponent. First to 5 wins.";
-  } else if (countdownActive) {
+  } else if (firstRound && countdownActive) {
     $("tugRoundStatus").textContent = `Starting in ${Math.ceil(countdownRemaining / 1000)}.`;
-  } else if (!youReady) {
+  } else if (firstRound && !youReady) {
     $("tugRoundStatus").textContent = opponentReady ? "Opponent is ready. Tap Ready." : "Tap Ready when you are set.";
-  } else if (!opponentReady) {
+  } else if (firstRound && !opponentReady) {
     $("tugRoundStatus").textContent = "Ready. Waiting for opponent.";
   } else if (state.finished) {
     $("tugRoundStatus").textContent = "Round locked. Waiting for opponent.";
@@ -675,9 +679,9 @@ async function submitDuelGuess(guess) {
       suppressResult: state.mode === "tug"
     });
     renderOpponent(data.room.opponent);
+    resetRoundFromRoom(data.room);
     renderTugMeter(data.room);
     showTugMatchResult(data.room);
-    resetRoundFromRoom(data.room);
     setDuelStatus(data.room);
   } catch {
     setMessage("Could not reach the room server.");
