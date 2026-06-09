@@ -990,7 +990,7 @@ body.light-theme .toggle-thumb {
 
 @media (max-width: 780px) {
   .shell {
-    padding: 18px;
+    padding: 12px;
   }
 
   #menuView.view-active {
@@ -1020,12 +1020,12 @@ body.light-theme .toggle-thumb {
 
   .game-header {
     grid-template-columns: 44px 1fr;
-    gap: 10px;
-    margin-bottom: 12px;
+    gap: 8px;
+    margin-bottom: 8px;
   }
 
   .game-header h2 {
-    font-size: 1.28rem;
+    font-size: 1.16rem;
   }
 
   .title-line {
@@ -1038,7 +1038,7 @@ body.light-theme .toggle-thumb {
   }
 
   .room-badge span {
-    font-size: 0.98rem;
+    font-size: 0.9rem;
   }
 
   .room-badge button {
@@ -1047,8 +1047,9 @@ body.light-theme .toggle-thumb {
 
   .timer {
     flex: 1;
-    min-height: 40px;
-    padding: 8px 10px;
+    min-height: 32px;
+    padding: 5px 10px;
+    font-size: 1rem;
   }
 
   .header-actions {
@@ -1064,31 +1065,36 @@ body.light-theme .toggle-thumb {
   .opponent {
     position: static;
     width: 100%;
-    margin-bottom: 14px;
-    padding: 10px;
+    margin-bottom: 8px;
+    padding: 7px 8px;
   }
 
   .tug-panel {
-    grid-template-columns: 1fr;
-    gap: 7px;
-    margin-bottom: 10px;
+    grid-template-columns: auto minmax(80px, 1fr) auto;
+    gap: 6px;
+    margin-bottom: 8px;
+    padding: 7px 8px;
   }
 
   .tug-meta,
   .opponent-side {
     justify-content: center;
+    font-size: 0.76rem;
+    gap: 4px;
   }
 
   .tug-track {
-    order: 2;
+    order: initial;
+    height: 8px;
   }
 
   .opponent-side {
-    order: 3;
+    order: initial;
   }
 
   .tug-round-status {
-    order: 4;
+    order: initial;
+    font-size: 0.72rem;
   }
 
   .mini-grid {
@@ -1125,23 +1131,23 @@ body.light-theme .toggle-thumb {
   }
 
   .board-wrap {
-    gap: 8px;
+    gap: 6px;
     padding-top: 0;
   }
 
   .message {
-    min-height: 20px;
-    font-size: 0.9rem;
+    min-height: 18px;
+    font-size: 0.82rem;
   }
 
   .board {
-    gap: 6px;
-    width: min(calc(100vw - 28px), calc((100vh - 230px) * 0.82), 360px);
+    gap: 5px;
+    width: min(calc(100vw - 64px), calc((100vh - 260px) * 0.82), 320px);
     min-width: 0;
   }
 
   .row {
-    gap: 6px;
+    gap: 5px;
   }
 
   .tile {
@@ -1189,7 +1195,7 @@ body.light-theme .toggle-thumb {
 
 @media (max-width: 430px) {
   .shell {
-    padding: 14px;
+    padding: 8px 10px;
   }
 
   #menuView {
@@ -1224,16 +1230,137 @@ body.light-theme .toggle-thumb {
   }
 
   .game-header {
-    grid-template-columns: 40px 1fr;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    gap: 7px;
+    margin-bottom: 6px;
+  }
+
+  .game-header h2 {
+    font-size: 1.04rem;
+  }
+
+  .game-header .eyebrow {
+    margin-bottom: 3px;
+    font-size: 0.62rem;
   }
 
   .icon-btn {
-    width: 40px;
-    min-height: 40px;
+    width: 36px;
+    min-height: 36px;
+    font-size: 1.12rem;
+  }
+
+  .title-line {
+    gap: 6px;
+  }
+
+  .room-badge {
+    min-height: 28px;
+    gap: 5px;
+    padding: 2px 3px 2px 7px;
+  }
+
+  .room-badge span {
+    font-size: 0.82rem;
+  }
+
+  .room-badge button {
+    min-height: 23px;
+    padding: 0 8px;
+  }
+
+  .header-actions {
+    grid-column: auto;
+    width: auto;
+  }
+
+  .timer {
+    min-width: 72px;
+    min-height: 32px;
+    padding: 5px 7px;
+    font-size: 0.86rem;
+  }
+
+  .opponent {
+    margin-bottom: 6px;
+    padding: 7px;
+  }
+
+  .opponent .eyebrow {
+    margin-bottom: 3px;
+    font-size: 0.62rem;
+  }
+
+  .opponent strong {
+    font-size: 0.96rem;
+  }
+
+  .mini-grid {
+    margin-top: 5px;
+    padding-bottom: 0;
+  }
+
+  .mini-row {
+    grid-template-columns: repeat(5, 6px);
+    gap: 3px;
+    padding-right: 5px;
+    margin-right: 5px;
+  }
+
+  .mini-cell {
+    width: 6px;
+    height: 6px;
+    border-radius: 2px;
+  }
+
+  .tug-panel {
+    gap: 5px;
+    margin-bottom: 6px;
+    padding: 7px;
+  }
+
+  .tug-meta,
+  .opponent-side {
+    font-size: 0.72rem;
+  }
+
+  .tug-meta span:last-child,
+  .opponent-side span:first-child {
+    font-size: 0.9rem;
+  }
+
+  .tug-mood {
+    width: 20px;
+    height: 20px;
+  }
+
+  .tug-marker {
+    width: 17px;
+    height: 17px;
+    border-width: 3px;
+  }
+
+  .tug-round-status {
+    font-size: 0.68rem;
+  }
+
+  .message {
+    min-height: 16px;
+    font-size: 0.76rem;
   }
 
   .board {
-    width: min(calc(100vw - 24px), calc((100vh - 225px) * 0.82), 340px);
+    gap: 4px;
+    width: min(calc(100vw - 84px), 292px);
+  }
+
+  .row {
+    gap: 4px;
+  }
+
+  .tile {
+    border-radius: 4px;
+    font-size: clamp(1.05rem, 7vw, 1.55rem);
   }
 
   .keyboard {
@@ -1296,22 +1423,18 @@ body.light-theme .toggle-thumb {
   }
 
   .game-header {
-    margin-bottom: 8px;
+    margin-bottom: 5px;
   }
 
   .opponent {
-    margin-bottom: 8px;
+    margin-bottom: 5px;
   }
 
   .board-wrap {
-    gap: 8px;
+    gap: 5px;
   }
 
   .board {
-    width: min(calc(100vw - 28px), calc((100vh - 215px) * 0.82), 330px);
-  }
-
-  .key {
-    height: 36px;
+    width: min(calc(100vw - 92px), calc((100vh - 330px) * 0.82), 280px);
   }
 }
