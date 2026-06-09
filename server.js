@@ -20,6 +20,7 @@ const dailyChallengeOverrides = {
   "2026-06-02": 921,
   "2026-06-03": 2048
 };
+const TUG_TARGET_SCORE = 5;
 
 function ensureData() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -177,10 +178,16 @@ function roomSnapshot(room, playerId) {
 
   return {
     code: room.code,
+    mode: room.mode || "duel",
     wordLength: room.answer.length,
     playerId,
     startedAt: you.startedAt,
     playerCount: Object.keys(room.players).length,
+    roundNumber: room.roundNumber || 1,
+    targetScore: room.targetScore || TUG_TARGET_SCORE,
+    scores: room.scores || null,
+    matchWinnerId: room.matchWinnerId || null,
+    lastRound: room.lastRound || null,
     you,
     opponent: opponent
       ? {
@@ -206,6 +213,82 @@ function createPlayer(name) {
     elapsedMs: null,
     won: false
   };
+}
+
+function nextRoomAnswer(room) {
+  if (!room || room.mode !== "tug") return dailyAnswer();
+  return words[(room.wordSeed + room.roundNumber - 1) % words.length];
+}
+
+function resetPlayerRound(player) {
+  player.startedAt = null;
+  player.progress = [];
+  player.solvedAt = null;
+  player.finishedAt = null;
+  player.elapsedMs = null;
+  player.won = false;
+}
+
+function advanceTugRound(room) {
+  room.roundNumber += 1;
+  room.answer = nextRoomAnswer(room);
+  for (const player of Object.values(room.players)) resetPlayerRound(player);
+}
+
+function maybeResolveTugRound(room) {
+  if (room.mode !== "tug" || room.matchWinnerId) return null;
+  const playerIds = Object.keys(room.players);
+  if (playerIds.length < 2) return null;
+  const [firstId, secondId] = playerIds;
+  const first = room.players[firstId];
+  const second = room.players[secondId];
+  if (!first.finishedAt || !second.finishedAt) return null;
+
+  let winnerId = null;
+  let points = 0;
+  if (first.won && second.won) {
+    winnerId = first.elapsedMs <= second.elapsedMs ? firstId : secondId;
+    points = 1;
+  } else if (first.won && !second.won) {
+    winnerId = firstId;
+    points = 2;
+  } else if (!first.won && second.won) {
+    winnerId = secondId;
+    points = 2;
+  }
+
+  const summary = {
+    roundNumber: room.roundNumber,
+    winnerId,
+    points,
+    players: Object.fromEntries(playerIds.map((id) => [id, {
+      name: room.players[id].name,
+      won: room.players[id].won,
+      elapsedMs: room.players[id].elapsedMs,
+      attempts: room.players[id].progress.length
+    }]))
+  };
+
+  if (winnerId) {
+    room.scores[winnerId] = Math.min(room.targetScore, (room.scores[winnerId] || 0) + points);
+    if (room.scores[winnerId] >= room.targetScore) {
+      room.matchWinnerId = winnerId;
+      recordLeaderboardScore({
+        gameId: `${room.code}:tug:${winnerId}`,
+        name: room.players[winnerId].name,
+        mode: "duel",
+        attempts: room.roundNumber,
+        elapsedMs: Date.now() - room.startedAt,
+        solvedAt: new Date().toISOString()
+      });
+    }
+  }
+
+  summary.scores = { ...room.scores };
+  summary.matchWinnerId = room.matchWinnerId || null;
+  room.lastRound = summary;
+  if (!room.matchWinnerId) advanceTugRound(room);
+  return summary;
 }
 
 function scoreGuess(guess, answer) {
@@ -293,16 +376,26 @@ async function handleApi(req, res) {
       const body = await readBody(req);
       const code = randomUUID().slice(0, 6).toUpperCase();
       const playerId = randomUUID();
-      const answer = dailyAnswer();
+      const mode = body.mode === "tug" ? "tug" : "duel";
       const room = {
         code,
-        answer,
+        mode,
+        answer: dailyAnswer(),
         challengeKey: dailyChallengeKey(),
         startedAt: Date.now(),
+        roundNumber: 1,
+        targetScore: TUG_TARGET_SCORE,
+        wordSeed: Math.floor(Math.random() * words.length),
+        scores: {
+          [playerId]: 0
+        },
+        lastRound: null,
+        matchWinnerId: null,
         players: {
           [playerId]: createPlayer(body.name)
         }
       };
+      if (mode === "tug") room.answer = nextRoomAnswer(room);
       rooms.set(code, room);
       json(res, 200, { room: roomSnapshot(room, playerId) });
       return;
@@ -322,6 +415,7 @@ async function handleApi(req, res) {
       }
       const playerId = randomUUID();
       room.players[playerId] = createPlayer(body.name);
+      if (room.mode === "tug") room.scores[playerId] = 0;
       json(res, 200, { room: roomSnapshot(room, playerId) });
       return;
     }
@@ -348,7 +442,11 @@ async function handleApi(req, res) {
       const player = room.players[playerId];
 
       if (action === "guess") {
-        if (player.solvedAt || player.progress.length >= 6) {
+        if (room.matchWinnerId) {
+          json(res, 409, { error: "Match is already finished" });
+          return;
+        }
+        if (player.finishedAt || player.progress.length >= 6) {
           json(res, 409, { error: "Game is already finished" });
           return;
         }
@@ -360,6 +458,7 @@ async function handleApi(req, res) {
         if (!player.startedAt) {
           player.startedAt = Date.now();
         }
+        const submittedAnswer = room.answer;
         const result = scoreGuess(guess, room.answer);
         player.progress.push(result);
         const won = guess === room.answer;
@@ -372,23 +471,30 @@ async function handleApi(req, res) {
         if (won && !player.solvedAt) {
           player.solvedAt = player.finishedAt;
           player.scoreRecorded = true;
-          recordLeaderboardScore({
-            gameId: `${room.code}:${playerId}`,
-            name: player.name,
-            mode: "duel",
-            attempts: player.progress.length,
-            elapsedMs: player.elapsedMs,
-            solvedAt: new Date(player.solvedAt).toISOString()
-          });
+          if (room.mode !== "tug") {
+            recordLeaderboardScore({
+              gameId: `${room.code}:${playerId}`,
+              name: player.name,
+              mode: "duel",
+              attempts: player.progress.length,
+              elapsedMs: player.elapsedMs,
+              solvedAt: new Date(player.solvedAt).toISOString()
+            });
+          }
         }
+        const startedAt = player.startedAt;
+        const attempts = player.progress.length;
+        const elapsedMs = player.elapsedMs;
+        const roundResult = room.mode === "tug" ? maybeResolveTugRound(room) : null;
         json(res, 200, {
           result,
           won,
           finished,
-          startedAt: player.startedAt,
-          attempts: player.progress.length,
-          elapsedMs: player.elapsedMs,
-          answer: finished ? room.answer : null,
+          roundResult,
+          startedAt,
+          attempts,
+          elapsedMs,
+          answer: finished ? submittedAnswer : null,
           room: roomSnapshot(room, playerId)
         });
         return;
@@ -414,5 +520,5 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, HOST, () => {
   const displayHost = HOST === "0.0.0.0" ? "localhost" : HOST;
-  console.log(`Wordle duel running at http://${displayHost}:${PORT}`);
+  console.log(`Word Sprint running at http://${displayHost}:${PORT}`);
 });

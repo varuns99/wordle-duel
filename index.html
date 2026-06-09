@@ -51,7 +51,8 @@
           </div>
           <div id="duelMenuStep" class="menu-step hidden">
             <div class="menu-actions">
-              <button id="createRoomBtn" class="button-green">Create Room</button>
+              <button id="createRoomBtn" class="button-green">Create Sprint Duel</button>
+              <button id="createTugRoomBtn" class="button-mustard">Create Word Tug</button>
               <button id="joinRoomBtn" class="button-blue">Join Room</button>
               <button id="duelBackBtn" class="text-button">Back</button>
             </div>
@@ -91,6 +92,23 @@
           </div>
           <div id="opponentGrid" class="mini-grid"></div>
         </aside>
+
+        <section id="tugPanel" class="tug-panel hidden" aria-live="polite">
+          <div class="tug-meta">
+            <span id="youMood" class="tug-mood">😐</span>
+            <strong>You</strong>
+            <span id="youTugScore">0</span>
+          </div>
+          <div class="tug-track" aria-label="Word Tug score meter">
+            <span id="tugMarker" class="tug-marker"></span>
+          </div>
+          <div class="tug-meta opponent-side">
+            <span id="opponentTugScore">0</span>
+            <strong id="tugOpponentName">Opponent</strong>
+            <span id="opponentMood" class="tug-mood">😐</span>
+          </div>
+          <div id="tugRoundStatus" class="tug-round-status">First to 5 wins.</div>
+        </section>
 
         <section class="board-wrap">
           <div id="message" class="message">Guess the 5-letter word.</div>

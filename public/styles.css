@@ -216,6 +216,9 @@ button:disabled {
 
   .board.shake,
   .row.recent .tile,
+  .tug-panel.match-point .tug-track,
+  .tug-panel.pulse .tug-marker,
+  .tug-panel.pulse .tug-mood,
   .theme-wave.wave-active {
     animation: none;
   }
@@ -580,6 +583,110 @@ body.light-theme .toggle-thumb {
   height: 7px;
   border-radius: 3px;
   background: var(--panel-2);
+}
+
+.tug-panel {
+  display: grid;
+  grid-template-columns: auto minmax(96px, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  width: min(520px, 100%);
+  margin: 0 auto 12px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  box-shadow: 0 14px 42px var(--shadow);
+}
+
+.tug-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.tug-meta span:last-child,
+.opponent-side span:first-child {
+  color: var(--gold);
+  font-size: 1.06rem;
+}
+
+.tug-mood {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  transition: transform 180ms ease;
+}
+
+.tug-track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, rgba(79, 157, 105, 0.86), rgba(198, 164, 75, 0.4) 50%, rgba(95, 142, 230, 0.86));
+  box-shadow: inset 0 0 0 1px rgba(244, 241, 232, 0.12);
+}
+
+.tug-marker {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--text);
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 18px rgba(198, 164, 75, 0.55);
+  transform: translate(-50%, -50%);
+  transition: left 420ms cubic-bezier(0.2, 0.9, 0.25, 1.2), box-shadow 180ms ease;
+}
+
+.tug-round-status {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.tug-panel.pulse .tug-mood,
+.tug-panel.pulse .tug-marker {
+  animation: tugPop 440ms ease;
+}
+
+.tug-panel.match-point .tug-track {
+  animation: tugPressure 900ms ease-in-out infinite alternate;
+}
+
+@keyframes tugPop {
+  50% {
+    transform: translate(-50%, -50%) scale(1.22);
+  }
+}
+
+.tug-panel.pulse .tug-mood {
+  animation-name: moodPop;
+}
+
+@keyframes moodPop {
+  50% {
+    transform: scale(1.25);
+  }
+}
+
+@keyframes tugPressure {
+  from {
+    filter: saturate(1);
+  }
+
+  to {
+    filter: saturate(1.45) brightness(1.08);
+  }
 }
 
 .board-wrap {
@@ -959,6 +1066,29 @@ body.light-theme .toggle-thumb {
     width: 100%;
     margin-bottom: 14px;
     padding: 10px;
+  }
+
+  .tug-panel {
+    grid-template-columns: 1fr;
+    gap: 7px;
+    margin-bottom: 10px;
+  }
+
+  .tug-meta,
+  .opponent-side {
+    justify-content: center;
+  }
+
+  .tug-track {
+    order: 2;
+  }
+
+  .opponent-side {
+    order: 3;
+  }
+
+  .tug-round-status {
+    order: 4;
   }
 
   .mini-grid {

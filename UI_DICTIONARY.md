@@ -18,7 +18,8 @@ Use these terms when describing changes or bugs.
 - **Daily Challenge button**: Starts the Daily Sprint puzzle.
 - **2 Player Duel button**: Opens the duel submenu.
 - **Duel submenu**: Menu step with Create Room and Join Room options.
-- **Create Room button**: Creates a multiplayer room.
+- **Create Sprint Duel button**: Creates a classic one-word multiplayer room.
+- **Create Word Tug button**: Creates a Word Tug - Time Challenge room.
 - **Join Room button**: Reveals the room-code entry flow.
 - **Duel Back button**: Returns from the duel submenu to the main menu.
 - **Room code field**: Input where a player enters a room code.
@@ -83,6 +84,18 @@ Use these terms when describing changes or bugs.
 - **Opponent attempt row**: One mini row for an opponent guess.
 - **Opponent mini cell**: One small color dot/square in the opponent progress grid.
 - **Attempt divider**: Faint line separating opponent attempts.
+
+## Word Tug
+
+- **Word Tug**: Multiplayer time challenge where both players solve the same rapid rounds until someone reaches 5.
+- **Word Tug meter**: Compact live score meter between "You" and the opponent name.
+- **Tug marker**: Moving dot on the Word Tug meter showing who is ahead.
+- **Tug score**: Each player's match score toward 5.
+- **Mood emoji**: Emoji beside each player that reacts to score and match danger.
+- **Match point state**: Meter intensity state when either player reaches 4 points.
+- **Tug round status**: Small text below the meter explaining the current round or recent pull.
+- **Pull**: A Word Tug point gain after a round.
+- **Failed-round bonus**: Extra point awarded when one player solves and the other fails all 6 guesses, for +2 total.
 
 ## Leaderboard
 
