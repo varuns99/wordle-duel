@@ -206,6 +206,7 @@ function roomSnapshot(room, playerId) {
     scores: room.scores || null,
     matchWinnerId: room.matchWinnerId || null,
     lastRound: room.lastRound || null,
+    history: room.history || [],
     you,
     opponent: opponent
       ? {
@@ -260,23 +261,27 @@ function maybeResolveTugRound(room) {
   const [firstId, secondId] = playerIds;
   const first = room.players[firstId];
   const second = room.players[secondId];
-  if (!first.finishedAt || !second.finishedAt) return null;
+  if (!first.finishedAt && !second.finishedAt) return null;
 
   let winnerId = null;
-  let points = 0;
-  if (first.won && second.won) {
+  let points = 1;
+  if (first.finishedAt && !second.finishedAt) {
+    winnerId = first.won ? firstId : secondId;
+  } else if (!first.finishedAt && second.finishedAt) {
+    winnerId = second.won ? secondId : firstId;
+  } else if (first.won && second.won) {
     winnerId = first.elapsedMs <= second.elapsedMs ? firstId : secondId;
-    points = 1;
   } else if (first.won && !second.won) {
     winnerId = firstId;
-    points = 2;
   } else if (!first.won && second.won) {
     winnerId = secondId;
-    points = 2;
+  } else {
+    points = 0;
   }
 
   const summary = {
     roundNumber: room.roundNumber,
+    word: room.answer,
     winnerId,
     points,
     players: Object.fromEntries(playerIds.map((id) => [id, {
@@ -289,13 +294,20 @@ function maybeResolveTugRound(room) {
 
   if (winnerId) {
     room.scores[winnerId] = Math.min(room.targetScore, (room.scores[winnerId] || 0) + points);
+    room.history.push({
+      roundNumber: summary.roundNumber,
+      word: summary.word,
+      winnerId,
+      winnerName: room.players[winnerId].name,
+      points
+    });
     if (room.scores[winnerId] >= room.targetScore) {
       room.matchWinnerId = winnerId;
       recordLeaderboardScore({
         gameId: `${room.code}:tug:${winnerId}`,
         name: room.players[winnerId].name,
         mode: "duel",
-        attempts: room.roundNumber,
+        attempts: room.history.length,
         elapsedMs: Date.now() - room.startedAt,
         solvedAt: new Date().toISOString()
       });
@@ -406,6 +418,7 @@ async function handleApi(req, res) {
         scores: {
           [playerId]: 0
         },
+        history: [],
         lastRound: null,
         matchWinnerId: null,
         players: {

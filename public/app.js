@@ -19,6 +19,7 @@ const state = {
   timerStarted: false,
   pollId: null,
   finished: false,
+  animateRow: null,
   roomRoundNumber: 1,
   lastSeenRoundResult: null,
   leaderboardEntries: [],
@@ -331,19 +332,30 @@ function showTugMatchResult(room) {
   const opponentId = Object.keys(scores).find((id) => id !== room.playerId);
   const opponentScore = opponentId ? scores[opponentId] || 0 : 0;
   const opponentName = room.opponent?.name || "Opponent";
+  const history = room.history || [];
+  const youWords = history
+    .filter((round) => round.winnerId === room.playerId)
+    .map((round) => round.word.toUpperCase());
+  const opponentWords = history
+    .filter((round) => round.winnerId && round.winnerId !== room.playerId)
+    .map((round) => round.word.toUpperCase());
+  const summary = [
+    `You: ${youWords.length ? youWords.join(", ") : "-"}`,
+    `${opponentName}: ${opponentWords.length ? opponentWords.join(", ") : "-"}`
+  ].join(" | ");
   $("resultKicker").textContent = "Word Tug - Time Challenge";
   $("resultTitle").textContent = youWon ? "You won the tug" : `${opponentName} won the tug`;
   $("resultStats").innerHTML = `
     <span><strong>${youScore}</strong> You</span>
-    <span><strong>${room.roundNumber}</strong> rounds</span>
+    <span><strong>${history.length}</strong> pulls</span>
     <span><strong>${opponentScore}</strong> ${escapeHtml(opponentName)}</span>
   `;
-  $("resultNote").textContent = "First to 5 wins. A failed round gives the solver +2.";
+  $("resultNote").textContent = summary;
   state.lastResultText = [
     "Word Sprint",
     `Word Tug ${youWon ? "win" : "loss"}`,
     `You ${youScore} - ${opponentScore} ${opponentName}`,
-    `${room.roundNumber} rounds`
+    summary
   ].join("\n");
   $("resultCard").classList.remove("hidden");
 }
@@ -392,6 +404,7 @@ function resetGame({ mode, answer, room }) {
     timerStarted: false,
     pollId: null,
     finished: false,
+    animateRow: null,
     roomRoundNumber: room?.roundNumber || 1,
     lastSeenRoundResult: null
   });
@@ -439,6 +452,7 @@ function updateTimer() {
 
 function renderBoard() {
   $("board").innerHTML = "";
+  const animateRow = state.animateRow;
   for (let r = 0; r < 6; r += 1) {
     const row = document.createElement("div");
     row.className = "row";
@@ -452,9 +466,10 @@ function renderBoard() {
       row.append(tile);
     }
     if (state.progress[r]) row.classList.add("evaluated");
-    if (state.progress[r] && r === state.progress.length - 1) row.classList.add("recent");
+    if (r === animateRow) row.classList.add("recent");
     $("board").append(row);
   }
+  state.animateRow = null;
 }
 
 function renderKeyboard() {
@@ -484,6 +499,7 @@ function resetRoundFromRoom(room) {
     timerId: null,
     timerStarted: false,
     finished: false,
+    animateRow: null,
     roomRoundNumber: room.roundNumber
   });
   hideResultCard();
@@ -606,6 +622,7 @@ function shakeBoard() {
 }
 
 async function applyGuessResult({ guess, scored, won, answer, suppressResult = false }) {
+  state.animateRow = state.row;
   state.progress.push(scored);
   for (let i = 0; i < 5; i += 1) {
     const letter = guess[i];

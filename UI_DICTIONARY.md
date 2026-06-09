@@ -95,7 +95,7 @@ Use these terms when describing changes or bugs.
 - **Match point state**: Meter intensity state when either player reaches 4 points.
 - **Tug round status**: Small text below the meter explaining the current round or recent pull.
 - **Pull**: A Word Tug point gain after a round.
-- **Failed-round bonus**: Extra point awarded when one player solves and the other fails all 6 guesses, for +2 total.
+- **Failed-round point**: Point awarded to the opponent when a player fails all 6 guesses before solving.
 
 ## Leaderboard
 
