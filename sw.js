@@ -1,4 +1,4 @@
-const CACHE_NAME = "word-sprint-v0.5.7";
+const CACHE_NAME = "word-sprint-v0.5.8";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -7,7 +7,8 @@ const APP_SHELL = [
   "/public/styles.css",
   "/public/words.json",
   "/public/icon-192.png",
-  "/public/icon-512.png"
+  "/public/icon-512.png",
+  "/public/icon-180.png"
 ];
 
 self.addEventListener("install", (event) => {
