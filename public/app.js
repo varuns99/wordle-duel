@@ -34,6 +34,7 @@ const rank = { absent: 1, present: 2, correct: 3 };
 const $ = (id) => document.getElementById(id);
 const WORD_LIST_URL = document.body.dataset.wordListUrl || "words.json";
 const API_BASE = document.body.dataset.apiBase || "api";
+const SERVICE_WORKER_URL = document.body.dataset.serviceWorkerUrl || "sw.js";
 const DAILY_CHALLENGE_OVERRIDES = {
   "2026-05-31": 420,
   "2026-06-01": 137,
@@ -82,6 +83,15 @@ function initTheme() {
     const nextTheme = document.body.classList.contains("light-theme") ? "dark" : "light";
     localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
     animateThemeChange(nextTheme);
+  });
+}
+
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register(SERVICE_WORKER_URL).catch(() => {
+      // Install support is a progressive enhancement; gameplay should continue.
+    });
   });
 }
 
@@ -1130,5 +1140,6 @@ $("joinRoomBtn").disabled = true;
 $("submitJoinRoomBtn").disabled = true;
 initTheme();
 initScoreTip();
+registerServiceWorker();
 $("playerName").value = localStorage.getItem(PLAYER_NAME_STORAGE_KEY) || "";
 loadWords();

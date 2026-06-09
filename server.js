@@ -395,7 +395,8 @@ function sendStatic(req, res) {
       ".js": "text/javascript",
       ".json": "application/json",
       ".webmanifest": "application/manifest+json",
-      ".svg": "image/svg+xml"
+      ".svg": "image/svg+xml",
+      ".png": "image/png"
     };
     res.writeHead(200, { "content-type": types[ext] || "application/octet-stream" });
     res.end(data);
