@@ -132,16 +132,34 @@ function dailyChallengeKey(date = new Date()) {
   return date.toISOString().slice(0, 10);
 }
 
-function dailyAnswer(date = new Date()) {
+function dailyIndex(date = new Date()) {
   const override = dailyChallengeOverrides[dailyChallengeKey(date)];
   if (Number.isInteger(override)) {
-    return words[override % words.length];
+    return override % words.length;
   }
   const start = Date.UTC(2026, 0, 1);
   const today = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
   const dayNumber = Math.floor((today - start) / 86_400_000);
-  const index = ((dayNumber % words.length) + words.length) % words.length;
-  return words[index];
+  return ((dayNumber % words.length) + words.length) % words.length;
+}
+
+function dailyAnswer(date = new Date()) {
+  return words[dailyIndex(date)];
+}
+
+function modeAnswerIndex(mode, roundNumber = 1, date = new Date()) {
+  const base = dailyIndex(date);
+  const offsets = {
+    daily: 0,
+    duel: 811,
+    tug: 1627
+  };
+  const offset = offsets[mode] || 0;
+  return (base + offset + Math.max(0, roundNumber - 1)) % words.length;
+}
+
+function modeAnswer(mode, roundNumber = 1, date = new Date()) {
+  return words[modeAnswerIndex(mode, roundNumber, date)];
 }
 
 function json(res, status, payload) {
@@ -216,8 +234,8 @@ function createPlayer(name) {
 }
 
 function nextRoomAnswer(room) {
-  if (!room || room.mode !== "tug") return dailyAnswer();
-  return words[(room.wordSeed + room.roundNumber - 1) % words.length];
+  if (!room || room.mode !== "tug") return modeAnswer("duel");
+  return modeAnswer("tug", room.roundNumber);
 }
 
 function resetPlayerRound(player) {
@@ -380,12 +398,11 @@ async function handleApi(req, res) {
       const room = {
         code,
         mode,
-        answer: dailyAnswer(),
+        answer: modeAnswer("duel"),
         challengeKey: dailyChallengeKey(),
         startedAt: Date.now(),
         roundNumber: 1,
         targetScore: TUG_TARGET_SCORE,
-        wordSeed: Math.floor(Math.random() * words.length),
         scores: {
           [playerId]: 0
         },

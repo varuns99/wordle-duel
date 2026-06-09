@@ -348,6 +348,18 @@ body.light-theme .toggle-thumb {
   display: none !important;
 }
 
+.version-badge {
+  position: fixed;
+  right: 10px;
+  bottom: 8px;
+  z-index: 4;
+  pointer-events: none;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  opacity: 0.42;
+}
+
 .theme-wave {
   position: fixed;
   top: -18vmax;
