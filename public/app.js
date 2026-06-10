@@ -292,8 +292,8 @@ function renderTugMeter(room) {
   const opponentScore = opponentId ? scores[opponentId] || 0 : 0;
   const opponentName = room.opponent?.name || "Opponent";
   const target = room.targetScore || 3;
-  const scoreDelta = youScore - opponentScore;
-  const markerPercent = 50 - (scoreDelta / (target * 2)) * 90;
+  const scoreProgress = Math.max(-target, Math.min(target, youScore));
+  const markerPercent = 50 - (scoreProgress / target) * 45;
   const clampedPercent = Math.max(5, Math.min(95, markerPercent));
   const youWon = room.matchWinnerId === room.playerId;
   const opponentWon = room.matchWinnerId && room.matchWinnerId !== room.playerId;
@@ -387,6 +387,9 @@ function renderTugCountdown(countdownEndsAt) {
 
 function hideResultCard() {
   $("resultCard").classList.add("hidden");
+  $("resultCard").classList.remove("result-overlay");
+  $("resultCard").classList.remove("tug-match-result");
+  document.body.classList.remove("tug-result-open");
   $("resultStats").innerHTML = "";
   $("resultNote").textContent = "";
   $("shareResultBtn").textContent = "Share";
@@ -398,6 +401,9 @@ function showResultCard({ won, answer, saved = true }) {
   const points = won ? calculatePoints(attempts, state.elapsedMs) : 0;
   const title = won ? "Solved" : "Sprint over";
   const mode = modeLabel(state.mode);
+  $("resultCard").classList.remove("result-overlay");
+  $("resultCard").classList.remove("tug-match-result");
+  document.body.classList.remove("tug-result-open");
   $("resultKicker").textContent = state.mode === "tug" ? "Word Tug" : mode === "duel" ? "Sprint Duel" : `Daily Sprint ${dailyChallengeKey()}`;
   $("resultTitle").textContent = title;
   $("resultStats").innerHTML = `
@@ -422,6 +428,7 @@ function showResultCard({ won, answer, saved = true }) {
 
 function showTugMatchResult(room) {
   if (state.mode !== "tug" || !room.matchWinnerId) return;
+  state.finished = true;
   const youWon = room.matchWinnerId === room.playerId;
   const scores = room.scores || {};
   const youScore = scores[room.playerId] || 0;
@@ -439,13 +446,11 @@ function showTugMatchResult(room) {
     `You: ${youWords.length ? youWords.join(", ") : "-"}`,
     `${opponentName}: ${opponentWords.length ? opponentWords.join(", ") : "-"}`
   ].join(" | ");
+  const winnerName = youWon ? "You" : opponentName;
+  const resultEmoji = youWon ? "🥳" : "🤕";
   $("resultKicker").textContent = "Word Tug - Time Challenge";
-  $("resultTitle").textContent = youWon ? "You won the tug" : `${opponentName} won the tug`;
-  $("resultStats").innerHTML = `
-    <span><strong>${youScore}</strong> You</span>
-    <span><strong>${history.length}</strong> rounds</span>
-    <span><strong>${opponentScore}</strong> ${escapeHtml(opponentName)}</span>
-  `;
+  $("resultTitle").innerHTML = `${resultEmoji} <span class="tug-result-winner">${escapeHtml(winnerName)}</span> won the tug`;
+  $("resultStats").innerHTML = "";
   $("resultNote").textContent = summary;
   state.lastResultText = [
     "Word Sprint",
@@ -453,6 +458,9 @@ function showTugMatchResult(room) {
     `You ${youScore} - ${opponentScore} ${opponentName}`,
     summary
   ].join("\n");
+  $("resultCard").classList.add("result-overlay");
+  $("resultCard").classList.add("tug-match-result");
+  document.body.classList.add("tug-result-open");
   $("resultCard").classList.remove("hidden");
 }
 
