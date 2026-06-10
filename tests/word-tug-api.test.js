@@ -176,12 +176,66 @@ async function testConcurrentStaleRoundGuard() {
   assert.equal(betaRoom.payload.room.opponent.progress.length, 0);
 }
 
+async function testLegacyClientWithoutRoundNumber() {
+  const { code, alphaId, betaId } = await createReadyTugRoom();
+
+  const alphaScores = await post(`/rooms/${code}/${alphaId}/guess`, {
+    guess: todayTugAnswer(1)
+  });
+  assert.equal(alphaScores.response.status, 200);
+  assert.equal(alphaScores.payload.won, true);
+  assert.equal(alphaScores.payload.room.roundNumber, 2);
+  assert.equal(alphaScores.payload.roundResult.word, todayTugAnswer(1));
+
+  const staleOldAnswer = await post(`/rooms/${code}/${betaId}/guess`, {
+    guess: todayTugAnswer(1)
+  });
+  assert.equal(staleOldAnswer.response.status, 409);
+  assert.equal(staleOldAnswer.payload.error, "That round already ended.");
+  assert.equal(staleOldAnswer.payload.room.roundNumber, 2);
+  assert.equal(staleOldAnswer.payload.room.you.progress.length, 0);
+
+  const betaScores = await post(`/rooms/${code}/${betaId}/guess`, {
+    guess: todayTugAnswer(2)
+  });
+  assert.equal(betaScores.response.status, 200);
+  assert.equal(betaScores.payload.won, true);
+  assert.equal(betaScores.payload.room.roundNumber, 3);
+  assert.equal(betaScores.payload.roundResult.word, todayTugAnswer(2));
+}
+
+async function testLegacyConcurrentStaleRoundGuard() {
+  const { code, alphaId, betaId } = await createReadyTugRoom();
+  const [alpha, beta] = await Promise.all([
+    post(`/rooms/${code}/${alphaId}/guess`, {
+      guess: todayTugAnswer(1)
+    }),
+    post(`/rooms/${code}/${betaId}/guess`, {
+      guess: todayTugAnswer(1)
+    })
+  ]);
+
+  const statuses = [alpha.response.status, beta.response.status].sort();
+  assert.deepEqual(statuses, [200, 409]);
+
+  const alphaRoom = await get(`/rooms/${code}/${alphaId}`);
+  const betaRoom = await get(`/rooms/${code}/${betaId}`);
+  assert.equal(alphaRoom.payload.room.roundNumber, 2);
+  assert.equal(betaRoom.payload.room.roundNumber, 2);
+  assert.equal(alphaRoom.payload.room.you.progress.length, 0);
+  assert.equal(betaRoom.payload.room.you.progress.length, 0);
+  assert.equal(alphaRoom.payload.room.opponent.progress.length, 0);
+  assert.equal(betaRoom.payload.room.opponent.progress.length, 0);
+}
+
 async function run() {
   const server = startServer();
   try {
     await server.ready();
     await testHappyPath();
     await testConcurrentStaleRoundGuard();
+    await testLegacyClientWithoutRoundNumber();
+    await testLegacyConcurrentStaleRoundGuard();
     console.log("Word Tug API tests passed");
   } finally {
     server.stop();

@@ -263,12 +263,30 @@ function resetPlayerRound(player) {
   player.won = false;
 }
 
-function advanceTugRound(room) {
+function advanceTugRound(room, summary) {
+  if (summary) {
+    room.previousRound = {
+      roundNumber: summary.roundNumber,
+      answer: summary.word
+    };
+  }
   room.roundNumber += 1;
   room.answer = nextRoomAnswer(room);
   room.roundStartAt = Date.now();
   room.countdownEndsAt = null;
   for (const player of Object.values(room.players)) resetPlayerRound(player);
+}
+
+function isStaleTugGuess(room, body, guess) {
+  const submittedRoundNumber = Number(body.roundNumber);
+  if (Number.isInteger(submittedRoundNumber)) {
+    return submittedRoundNumber !== (room.roundNumber || 1);
+  }
+  return Boolean(
+    room.previousRound &&
+    room.previousRound.roundNumber !== (room.roundNumber || 1) &&
+    guess === room.previousRound.answer
+  );
 }
 
 function maybeResolveTugRound(room) {
@@ -340,7 +358,7 @@ function maybeResolveTugRound(room) {
   summary.scores = { ...room.scores };
   summary.matchWinnerId = room.matchWinnerId || null;
   room.lastRound = summary;
-  if (!room.matchWinnerId) advanceTugRound(room);
+  if (!room.matchWinnerId) advanceTugRound(room, summary);
   return summary;
 }
 
@@ -445,6 +463,7 @@ async function handleApi(req, res) {
         },
         history: [],
         lastRound: null,
+        previousRound: null,
         matchWinnerId: null,
         ready: {},
         countdownEndsAt: null,
@@ -546,14 +565,6 @@ async function handleApi(req, res) {
               return;
             }
           }
-          const submittedRoundNumber = Number(body.roundNumber);
-          if (!Number.isInteger(submittedRoundNumber) || submittedRoundNumber !== (room.roundNumber || 1)) {
-            json(res, 409, {
-              error: "That round already ended.",
-              room: roomSnapshot(room, playerId)
-            });
-            return;
-          }
         }
         if (player.finishedAt || player.progress.length >= 6) {
           json(res, 409, { error: "Game is already finished" });
@@ -562,6 +573,13 @@ async function handleApi(req, res) {
         const guess = String(body.guess || "").toLowerCase();
         if (!validGuesses.has(guess)) {
           json(res, 400, { error: "Not in this word list" });
+          return;
+        }
+        if (room.mode === "tug" && isStaleTugGuess(room, body, guess)) {
+          json(res, 409, {
+            error: "That round already ended.",
+            room: roomSnapshot(room, playerId)
+          });
           return;
         }
         if (!player.startedAt) {
