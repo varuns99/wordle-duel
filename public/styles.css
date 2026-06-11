@@ -629,6 +629,26 @@ body.tug-result-open::before {
   box-shadow: 0 14px 42px var(--shadow);
 }
 
+.duel-ready-panel {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: min(420px, 100%);
+  margin: 0 auto 12px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  box-shadow: 0 14px 42px var(--shadow);
+}
+
+.duel-ready-status {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-align: center;
+}
+
 .tug-meta {
   display: inline-flex;
   align-items: center;
@@ -1015,7 +1035,7 @@ body.tug-result-open::before {
 
 .leader-tabs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
   width: min(420px, 100%);
   margin: 18px auto 0;
@@ -1071,6 +1091,10 @@ body.tug-result-open::before {
   min-height: 48px;
   border-bottom: 1px solid var(--line);
   color: var(--muted);
+}
+
+.leader-row.tug-leader-row {
+  grid-template-columns: 42px minmax(0, 1fr) 72px 72px 82px 82px;
 }
 
 .leader-row:last-child {
@@ -1188,11 +1212,16 @@ body.tug-result-open::before {
     padding: 7px 8px;
   }
 
-  .tug-panel {
+  .tug-panel,
+  .duel-ready-panel {
     grid-template-columns: auto minmax(80px, 1fr) auto;
     gap: 6px;
     margin-bottom: 8px;
     padding: 7px 8px;
+  }
+
+  .duel-ready-panel {
+    grid-template-columns: 1fr;
   }
 
   .tug-meta,
@@ -1213,6 +1242,10 @@ body.tug-result-open::before {
 
   .tug-round-status {
     order: initial;
+    font-size: 0.72rem;
+  }
+
+  .duel-ready-status {
     font-size: 0.72rem;
   }
 
@@ -1459,10 +1492,15 @@ body.tug-result-open::before {
     border-radius: 2px;
   }
 
-  .tug-panel {
+  .tug-panel,
+  .duel-ready-panel {
     gap: 5px;
     margin-bottom: 6px;
     padding: 7px;
+  }
+
+  .duel-ready-panel {
+    grid-template-columns: 1fr;
   }
 
   .tug-meta,
@@ -1487,6 +1525,10 @@ body.tug-result-open::before {
   }
 
   .tug-round-status {
+    font-size: 0.68rem;
+  }
+
+  .duel-ready-status {
     font-size: 0.68rem;
   }
 
@@ -1568,6 +1610,10 @@ body.tug-result-open::before {
     grid-template-columns: 28px minmax(74px, 1fr) 54px 38px 46px 82px;
     gap: 5px;
     font-size: 0.78rem;
+  }
+
+  .leader-row.tug-leader-row {
+    grid-template-columns: 28px minmax(82px, 1fr) 44px 44px 52px 66px;
   }
 
   .leader-header {

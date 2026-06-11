@@ -10,7 +10,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="public/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="public/icon-180.png">
-    <link rel="stylesheet" href="public/styles.css?v=0.5.14">
+    <link rel="stylesheet" href="public/styles.css?v=0.5.15">
   </head>
   <body data-word-list-url="public/words.json" data-api-base="api" data-service-worker-url="sw.js">
     <main class="shell">
@@ -116,6 +116,11 @@
         </section>
 
         <section class="board-wrap">
+          <section id="duelReadyPanel" class="duel-ready-panel hidden" aria-live="polite">
+            <div id="duelReadyStatus" class="duel-ready-status">Waiting for both players.</div>
+            <div id="duelCountdown" class="tug-countdown hidden">5</div>
+            <button id="duelReadyBtn" class="tug-ready-btn button-green" type="button">Ready</button>
+          </section>
           <div id="message" class="message">Guess the 5-letter word.</div>
           <div id="board" class="board" aria-label="Wordle board"></div>
           <div id="resultCard" class="result-card hidden" aria-live="polite">
@@ -143,6 +148,7 @@
         <div class="leader-tabs" role="tablist" aria-label="Leaderboard category">
           <button id="dailyTabBtn" class="leader-tab active" type="button" role="tab" aria-selected="true">Daily</button>
           <button id="duelTabBtn" class="leader-tab" type="button" role="tab" aria-selected="false">Duel</button>
+          <button id="tugTabBtn" class="leader-tab" type="button" role="tab" aria-selected="false">Word Tug</button>
         </div>
         <div id="leaderboardList" class="leaderboard"></div>
       </section>
@@ -164,8 +170,8 @@
       </div>
     </div>
     <div id="themeWave" class="theme-wave hidden" aria-hidden="true"></div>
-    <div class="version-badge" aria-label="App version">v0.5.14</div>
+    <div class="version-badge" aria-label="App version">v0.5.15</div>
 
-    <script src="public/app.js?v=0.5.14"></script>
+    <script src="public/app.js?v=0.5.15"></script>
   </body>
 </html>
