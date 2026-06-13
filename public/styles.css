@@ -629,6 +629,96 @@ body.tug-result-open::before {
   box-shadow: 0 14px 42px var(--shadow);
 }
 
+.race-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 10px;
+  align-items: center;
+  width: min(520px, 100%);
+  margin: 0 auto 12px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  box-shadow: 0 14px 42px var(--shadow);
+}
+
+.race-lane {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.race-lane-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.race-lane-head strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.race-lane-head span {
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.race-track {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, rgba(95, 142, 230, 0.3), rgba(79, 157, 105, 0.86));
+  box-shadow: inset 0 0 0 1px rgba(244, 241, 232, 0.14);
+}
+
+.race-car {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  z-index: 1;
+  font-size: 1.12rem;
+  line-height: 1;
+  transform: translate(-10%, -54%);
+  filter: drop-shadow(0 0 7px rgba(95, 142, 230, 0.42));
+  transition: left 420ms cubic-bezier(0.2, 0.9, 0.25, 1.18);
+}
+
+.race-finish {
+  position: absolute;
+  top: 50%;
+  right: -2px;
+  font-size: 0.95rem;
+  line-height: 1;
+  transform: translateY(-54%);
+}
+
+.race-round-status {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.race-panel.pulse .race-car {
+  animation: racePop 440ms ease;
+}
+
+@keyframes racePop {
+  50% {
+    transform: translate(-10%, -54%) scale(1.22);
+  }
+}
+
 .duel-ready-panel {
   display: grid;
   justify-items: center;
@@ -936,7 +1026,8 @@ body.tug-result-open::before {
   font-size: 1.45rem;
 }
 
-.result-card.tug-match-result h3 {
+.result-card.tug-match-result h3,
+.result-card.race-match-result h3 {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -945,7 +1036,8 @@ body.tug-result-open::before {
   line-height: 1.05;
 }
 
-.tug-result-winner {
+.tug-result-winner,
+.race-result-winner {
   color: var(--gold);
 }
 
@@ -1213,6 +1305,7 @@ body.tug-result-open::before {
   }
 
   .tug-panel,
+  .race-panel,
   .duel-ready-panel {
     grid-template-columns: auto minmax(80px, 1fr) auto;
     gap: 6px;
@@ -1222,6 +1315,31 @@ body.tug-result-open::before {
 
   .duel-ready-panel {
     grid-template-columns: 1fr;
+  }
+
+  .race-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .race-lane {
+    gap: 4px;
+  }
+
+  .race-lane-head,
+  .race-round-status {
+    font-size: 0.72rem;
+  }
+
+  .race-track {
+    height: 9px;
+  }
+
+  .race-car {
+    font-size: 1rem;
+  }
+
+  .race-finish {
+    font-size: 0.82rem;
   }
 
   .tug-meta,
@@ -1307,7 +1425,7 @@ body.tug-result-open::before {
 
   .board {
     gap: 5px;
-    width: min(calc(100vw - 64px), calc((100vh - 260px) * 0.82), 320px);
+    width: min(calc(100vw - 64px), max(230px, calc((100dvh - 312px) * 0.82)), 320px);
     min-width: 0;
   }
 

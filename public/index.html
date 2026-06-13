@@ -10,7 +10,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-180.png">
-    <link rel="stylesheet" href="styles.css?v=0.5.15">
+    <link rel="stylesheet" href="styles.css?v=0.6.0">
   </head>
   <body data-word-list-url="words.json" data-api-base="api" data-service-worker-url="sw.js">
     <main class="shell">
@@ -56,6 +56,7 @@
             <div class="menu-actions">
               <button id="createRoomBtn" class="button-green">Create Sprint Duel</button>
               <button id="createTugRoomBtn" class="button-mustard">Create Word Tug</button>
+              <button id="createRaceRoomBtn" class="button-blue">Create Word Race</button>
               <button id="joinRoomBtn" class="button-blue">Join Room</button>
               <button id="duelBackBtn" class="text-button">Back</button>
             </div>
@@ -115,6 +116,32 @@
           <button id="tugReadyBtn" class="tug-ready-btn button-green" type="button">Ready</button>
         </section>
 
+        <section id="racePanel" class="race-panel hidden" aria-live="polite">
+          <div class="race-lane">
+            <div class="race-lane-head">
+              <strong>You</strong>
+              <span id="youRaceScore">0/5</span>
+            </div>
+            <div class="race-track" aria-label="Your Word Race meter">
+              <span id="youRaceCar" class="race-car">🏎️</span>
+              <span class="race-finish" aria-hidden="true">🏁</span>
+            </div>
+          </div>
+          <div class="race-lane">
+            <div class="race-lane-head">
+              <strong id="raceOpponentName">Opponent</strong>
+              <span id="opponentRaceScore">0/5</span>
+            </div>
+            <div class="race-track" aria-label="Opponent Word Race meter">
+              <span id="opponentRaceCar" class="race-car">🏎️</span>
+              <span class="race-finish" aria-hidden="true">🏁</span>
+            </div>
+          </div>
+          <div id="raceRoundStatus" class="race-round-status">First to 5 wins.</div>
+          <div id="raceCountdown" class="tug-countdown hidden">5</div>
+          <button id="raceReadyBtn" class="tug-ready-btn button-green" type="button">Ready</button>
+        </section>
+
         <section class="board-wrap">
           <section id="duelReadyPanel" class="duel-ready-panel hidden" aria-live="polite">
             <div id="duelReadyStatus" class="duel-ready-status">Waiting for both players.</div>
@@ -170,8 +197,8 @@
       </div>
     </div>
     <div id="themeWave" class="theme-wave hidden" aria-hidden="true"></div>
-    <div class="version-badge" aria-label="App version">v0.5.15</div>
+    <div class="version-badge" aria-label="App version">v0.6.0</div>
 
-    <script src="app.js?v=0.5.15"></script>
+    <script src="app.js?v=0.6.0"></script>
   </body>
 </html>

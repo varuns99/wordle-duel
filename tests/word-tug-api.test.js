@@ -7,13 +7,23 @@ const { spawn } = require("child_process");
 const PORT = 4191;
 const BASE = `http://127.0.0.1:${PORT}/api`;
 const TUG_TEST_WORDS = ["knack", "snoop", "buggy", "vogue", "crane", "slate"];
+const RACE_TEST_WORDS = ["crane", "slate", "vogue", "buggy", "knack", "snoop"];
+const WORD_DATA = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "public", "words.json"), "utf8"));
 
 function testTugAnswer(roundNumber) {
   return TUG_TEST_WORDS[(Math.max(1, roundNumber) - 1) % TUG_TEST_WORDS.length];
 }
 
+function testRaceAnswer(roundNumber) {
+  return RACE_TEST_WORDS[(Math.max(1, roundNumber) - 1) % RACE_TEST_WORDS.length];
+}
+
+function wrongGuesses(answer) {
+  return WORD_DATA.answers.filter((word) => word !== answer).slice(0, 6);
+}
+
 function todayModeAnswer(mode, roundNumber = 1) {
-  const words = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "public", "words.json"), "utf8")).answers;
+  const words = WORD_DATA.answers;
   const start = Date.UTC(2026, 0, 1);
   const now = new Date();
   const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
@@ -32,8 +42,9 @@ function startServer() {
       PORT: String(PORT),
       HOST: "127.0.0.1",
       DATA_DIR: dataDir,
-      TUG_COUNTDOWN_MS: "20",
-      TUG_WORD_SEQUENCE: TUG_TEST_WORDS.join(",")
+      TUG_COUNTDOWN_MS: "80",
+      TUG_WORD_SEQUENCE: TUG_TEST_WORDS.join(","),
+      RACE_WORD_SEQUENCE: RACE_TEST_WORDS.join(",")
     },
     stdio: ["ignore", "pipe", "pipe"]
   });
@@ -118,7 +129,42 @@ async function createReadyTugRoom() {
   assert.equal(duringCountdown.response.status, 409);
   assert.equal(duringCountdown.payload.error, "Countdown in progress.");
 
-  await new Promise((resolve) => setTimeout(resolve, 35));
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  return { code, alphaId, betaId };
+}
+
+async function createReadyRaceRoom() {
+  const created = await post("/rooms", { name: "Alpha", mode: "race" });
+  assert.equal(created.response.status, 200);
+  assert.equal(created.payload.room.mode, "race");
+  assert.equal(created.payload.room.targetScore, 5);
+  const code = created.payload.room.code;
+  const alphaId = created.payload.room.playerId;
+
+  const joined = await post("/rooms/join", { name: "Beta", code });
+  assert.equal(joined.response.status, 200);
+  const betaId = joined.payload.room.playerId;
+
+  const beforeReady = await post(`/rooms/${code}/${alphaId}/guess`, {
+    guess: testRaceAnswer(1),
+    roundNumber: 1
+  });
+  assert.equal(beforeReady.response.status, 409);
+  assert.equal(beforeReady.payload.error, "Both players need to be ready.");
+
+  await post(`/rooms/${code}/${alphaId}/ready`);
+  const ready = await post(`/rooms/${code}/${betaId}/ready`);
+  assert.equal(ready.response.status, 200);
+  assert.ok(ready.payload.room.countdownEndsAt);
+
+  const duringCountdown = await post(`/rooms/${code}/${alphaId}/guess`, {
+    guess: testRaceAnswer(1),
+    roundNumber: 1
+  });
+  assert.equal(duringCountdown.response.status, 409);
+  assert.equal(duringCountdown.payload.error, "Countdown in progress.");
+
+  await new Promise((resolve) => setTimeout(resolve, 100));
   return { code, alphaId, betaId };
 }
 
@@ -158,7 +204,7 @@ async function testSprintDuelReadyCountdown() {
   assert.equal(duringCountdown.response.status, 409);
   assert.equal(duringCountdown.payload.error, "Countdown in progress.");
 
-  await new Promise((resolve) => setTimeout(resolve, 35));
+  await new Promise((resolve) => setTimeout(resolve, 100));
   const active = await get(`/rooms/${code}/${alphaId}`);
   assert.equal(active.payload.room.roundActive, true);
 
@@ -201,6 +247,91 @@ async function testHappyPath() {
   assert.equal(betaScores.response.status, 200);
   assert.equal(betaScores.payload.room.roundNumber, 3);
   assert.equal(betaScores.payload.room.scores[betaId], 0);
+}
+
+async function testRaceHappyPath() {
+  const { code, alphaId, betaId } = await createReadyRaceRoom();
+  const active = await get(`/rooms/${code}/${alphaId}`);
+  assert.equal(active.payload.room.roundActive, true);
+
+  const round1 = await post(`/rooms/${code}/${alphaId}/guess`, {
+    guess: testRaceAnswer(1),
+    roundNumber: 1
+  });
+  assert.equal(round1.response.status, 200);
+  assert.equal(round1.payload.won, true);
+  assert.equal(round1.payload.room.roundNumber, 2);
+  assert.equal(round1.payload.room.scores[alphaId], 1);
+  assert.equal(round1.payload.room.scores[betaId], 0);
+  assert.equal(round1.payload.roundResult.word, testRaceAnswer(1));
+  assert.equal(round1.payload.roundResult.reason, "solve");
+
+  const stale = await post(`/rooms/${code}/${betaId}/guess`, {
+    guess: testRaceAnswer(1),
+    roundNumber: 1
+  });
+  assert.equal(stale.response.status, 409);
+  assert.equal(stale.payload.error, "That round already ended.");
+  assert.equal(stale.payload.room.roundNumber, 2);
+
+  const betaScores = await post(`/rooms/${code}/${betaId}/guess`, {
+    guess: testRaceAnswer(2),
+    roundNumber: 2
+  });
+  assert.equal(betaScores.response.status, 200);
+  assert.equal(betaScores.payload.room.roundNumber, 3);
+  assert.equal(betaScores.payload.room.scores[alphaId], 1);
+  assert.equal(betaScores.payload.room.scores[betaId], 1);
+}
+
+async function testRaceMissAwardsOpponent() {
+  const { code, alphaId, betaId } = await createReadyRaceRoom();
+  const answer = testRaceAnswer(1);
+  const misses = wrongGuesses(answer);
+
+  for (let index = 0; index < 6; index += 1) {
+    const result = await post(`/rooms/${code}/${alphaId}/guess`, {
+      guess: misses[index],
+      roundNumber: 1
+    });
+    assert.equal(result.response.status, 200);
+    if (index < 5) {
+      assert.equal(result.payload.finished, false);
+    } else {
+      assert.equal(result.payload.finished, true);
+      assert.equal(result.payload.roundResult.reason, "miss");
+      assert.equal(result.payload.roundResult.winnerId, betaId);
+      assert.equal(result.payload.room.scores[alphaId], 0);
+      assert.equal(result.payload.room.scores[betaId], 1);
+      assert.equal(result.payload.room.roundNumber, 2);
+    }
+  }
+}
+
+async function testRaceMatchWinner() {
+  const { code, alphaId, betaId } = await createReadyRaceRoom();
+
+  for (let round = 1; round <= 5; round += 1) {
+    const result = await post(`/rooms/${code}/${alphaId}/guess`, {
+      guess: testRaceAnswer(round),
+      roundNumber: round
+    });
+    assert.equal(result.response.status, 200);
+    assert.equal(result.payload.room.scores[alphaId], round);
+    assert.equal(result.payload.room.scores[betaId], 0);
+  }
+
+  const finished = await get(`/rooms/${code}/${betaId}`);
+  assert.equal(finished.payload.room.matchWinnerId, alphaId);
+  assert.equal(finished.payload.room.roundNumber, 5);
+  assert.equal(finished.payload.room.scores[alphaId], 5);
+
+  const afterMatch = await post(`/rooms/${code}/${betaId}/guess`, {
+    guess: testRaceAnswer(5),
+    roundNumber: 5
+  });
+  assert.equal(afterMatch.response.status, 409);
+  assert.equal(afterMatch.payload.error, "Match is already finished");
 }
 
 async function testConcurrentStaleRoundGuard() {
@@ -307,11 +438,14 @@ async function run() {
     await server.ready();
     await testSprintDuelReadyCountdown();
     await testHappyPath();
+    await testRaceHappyPath();
+    await testRaceMissAwardsOpponent();
+    await testRaceMatchWinner();
     await testConcurrentStaleRoundGuard();
     await testLegacyClientWithoutRoundNumber();
     await testLegacyConcurrentStaleRoundGuard();
     await testTugLeaderboardRecord();
-    console.log("Word Tug API tests passed");
+    console.log("Room API tests passed");
   } finally {
     server.stop();
   }

@@ -174,8 +174,13 @@ function calculatePoints(attempts, elapsedMs) {
 }
 
 function modeLabel(mode) {
+  if (mode === "race") return "race";
   if (mode === "tug") return "tug";
   return mode === "duel" ? "duel" : "daily";
+}
+
+function roomMode(mode) {
+  return mode === "tug" || mode === "race" ? mode : "duel";
 }
 
 function dailyGameId() {
@@ -278,10 +283,24 @@ function tugRoundNotice(room, opponentName) {
   return `${winnerName} scored +${room.lastRound.points} on ${word}. Round ${room.roundNumber} begins.`;
 }
 
+function raceRoundNotice(room, opponentName) {
+  if (!room?.lastRound) return "";
+  const word = tugWordLabel(room.lastRound.word);
+  const winnerName = room.lastRound.winnerId === room.playerId ? "You" : opponentName;
+  if (room.lastRound.reason === "miss") {
+    return `${winnerName} scored +1 after a miss on ${word}. Round ${room.roundNumber} begins.`;
+  }
+  return `${winnerName} scored +${room.lastRound.points || 1} on ${word}. Round ${room.roundNumber} begins.`;
+}
+
 function setDuelStatus(room) {
-  if ((state.mode !== "duel" && state.mode !== "tug") || !room) return;
+  if ((state.mode !== "duel" && state.mode !== "tug" && state.mode !== "race") || !room) return;
   if (state.mode === "tug") {
     renderTugMeter(room);
+    return;
+  }
+  if (state.mode === "race") {
+    renderRaceMeter(room);
     return;
   }
   renderDuelReady(room);
@@ -488,14 +507,118 @@ function renderTugCountdown(countdownEndsAt) {
   state.countdownId = setInterval(updateCountdown, 120);
 }
 
+function raceCarPosition(score, target) {
+  const percent = (Math.max(0, Math.min(target, score)) / target) * 100;
+  return `${Math.max(0, Math.min(96, percent))}%`;
+}
+
+function renderRaceMeter(room) {
+  if (state.mode !== "race" || !room) return;
+  if (room.roundActive && !room.matchWinnerId && !room.you?.finishedAt && state.finished) {
+    state.finished = false;
+  }
+  const scores = room.scores || {};
+  const youScore = scores[room.playerId] || 0;
+  const opponentId = Object.keys(scores).find((id) => id !== room.playerId);
+  const opponentScore = opponentId ? scores[opponentId] || 0 : 0;
+  const opponentName = room.opponent?.name || "Opponent";
+  const target = room.targetScore || 5;
+  const youWon = room.matchWinnerId === room.playerId;
+  const opponentWon = room.matchWinnerId && room.matchWinnerId !== room.playerId;
+  const { youReady, opponentReady } = roomReadyState(room);
+  const countdownRemaining = room.countdownEndsAt ? room.countdownEndsAt - Date.now() : 0;
+  const countdownActive = countdownRemaining > 0;
+  const firstRound = room.roundNumber === 1;
+  state.tugRoundActive = Boolean(room.roundActive || (!firstRound && room.roundStartAt && room.opponent && !room.matchWinnerId));
+
+  $("youRaceScore").textContent = `${youScore}/${target}`;
+  $("opponentRaceScore").textContent = `${opponentScore}/${target}`;
+  $("raceOpponentName").textContent = opponentName;
+  $("youRaceCar").style.left = raceCarPosition(youScore, target);
+  $("opponentRaceCar").style.left = raceCarPosition(opponentScore, target);
+  $("raceReadyBtn").classList.toggle("hidden", Boolean(room.matchWinnerId || !room.opponent || !firstRound || state.tugRoundActive || countdownActive));
+  $("raceReadyBtn").disabled = youReady;
+  $("raceReadyBtn").textContent = "Ready";
+  renderRaceCountdown(firstRound ? room.countdownEndsAt : null);
+  if (!firstRound && room.roundStartAt && !state.timerStarted && !state.finished && !room.matchWinnerId) {
+    startTimer(room.roundStartAt);
+  }
+
+  if (room.matchWinnerId) {
+    $("raceRoundStatus").textContent = youWon ? "You won Word Race." : `${opponentName} won Word Race.`;
+  } else if (room.lastRound && state.lastSeenRoundResult !== `${room.lastRound.roundNumber}:${room.lastRound.winnerId}:${room.lastRound.points}:${room.lastRound.reason}`) {
+    state.lastSeenRoundResult = `${room.lastRound.roundNumber}:${room.lastRound.winnerId}:${room.lastRound.points}:${room.lastRound.reason}`;
+    state.tugNoticeText = raceRoundNotice(room, opponentName);
+    state.tugNoticeUntil = Date.now() + 3600;
+    $("raceRoundStatus").textContent = state.tugNoticeText;
+    setMessage(state.tugNoticeText);
+    $("racePanel").classList.add("pulse");
+    setTimeout(() => $("racePanel").classList.remove("pulse"), 520);
+  } else if (!room.opponent) {
+    $("raceRoundStatus").textContent = `Waiting for opponent. First to ${target} wins.`;
+    setMessage("Share the room code. Waiting for opponent.");
+  } else if (firstRound && countdownActive) {
+    $("raceRoundStatus").textContent = `Starting in ${Math.ceil(countdownRemaining / 1000)}.`;
+    setMessage(`Starting in ${Math.ceil(countdownRemaining / 1000)}.`);
+  } else if (firstRound && !youReady) {
+    $("raceRoundStatus").textContent = opponentReady ? "Opponent is ready. Tap Ready." : "Tap Ready when you are set.";
+    setMessage(opponentReady ? "Opponent is ready. Tap Ready." : "Tap Ready when you are set.");
+  } else if (firstRound && !opponentReady) {
+    $("raceRoundStatus").textContent = "Ready. Waiting for opponent.";
+    setMessage("Ready. Waiting for opponent.");
+  } else if (state.finished) {
+    $("raceRoundStatus").textContent = "Preparing the next round.";
+    setMessage("Preparing the next round.");
+  } else if (state.tugNoticeText && Date.now() < state.tugNoticeUntil) {
+    $("raceRoundStatus").textContent = state.tugNoticeText;
+    setMessage(state.tugNoticeText);
+  } else {
+    $("raceRoundStatus").textContent = `Round ${room.roundNumber}. First solve scores +1.`;
+    setMessage(`Round ${room.roundNumber}. First solve scores +1.`);
+  }
+}
+
+function renderRaceCountdown(countdownEndsAt) {
+  clearInterval(state.countdownId);
+  state.countdownId = null;
+  state.countdownEndsAt = countdownEndsAt || null;
+  const countdown = $("raceCountdown");
+  if (!countdownEndsAt || countdownEndsAt <= Date.now()) {
+    countdown.classList.add("hidden");
+    if (countdownEndsAt && state.mode === "race" && !state.timerStarted && !state.finished) startTimer(countdownEndsAt);
+    return;
+  }
+
+  const updateCountdown = () => {
+    const remaining = countdownEndsAt - Date.now();
+    if (remaining <= 0) {
+      countdown.classList.add("hidden");
+      clearInterval(state.countdownId);
+      state.countdownId = null;
+      state.tugRoundActive = true;
+      if (!state.timerStarted && !state.finished) startTimer(countdownEndsAt);
+      $("raceRoundStatus").textContent = `Round ${state.roomRoundNumber}. First solve scores +1.`;
+      setMessage(`Round ${state.roomRoundNumber}. First solve scores +1.`);
+      return;
+    }
+    countdown.textContent = Math.ceil(remaining / 1000);
+    countdown.classList.remove("hidden");
+  };
+
+  updateCountdown();
+  state.countdownId = setInterval(updateCountdown, 120);
+}
+
 function hideResultCard() {
   $("resultCard").classList.add("hidden");
   $("resultCard").classList.remove("result-overlay");
   $("resultCard").classList.remove("tug-match-result");
+  $("resultCard").classList.remove("race-match-result");
   document.body.classList.remove("tug-result-open");
   $("resultStats").innerHTML = "";
   $("resultNote").textContent = "";
   $("shareResultBtn").textContent = "Share";
+  $("resultLeaderboardBtn").classList.remove("hidden");
   state.lastResultText = "";
 }
 
@@ -506,8 +629,10 @@ function showResultCard({ won, answer, saved = true }) {
   const mode = modeLabel(state.mode);
   $("resultCard").classList.remove("result-overlay");
   $("resultCard").classList.remove("tug-match-result");
+  $("resultCard").classList.remove("race-match-result");
   document.body.classList.remove("tug-result-open");
-  $("resultKicker").textContent = state.mode === "tug" ? "Word Tug" : mode === "duel" ? "Sprint Duel" : `Daily Sprint ${dailyChallengeKey()}`;
+  $("resultLeaderboardBtn").classList.remove("hidden");
+  $("resultKicker").textContent = state.mode === "tug" ? "Word Tug" : state.mode === "race" ? "Word Race" : mode === "duel" ? "Sprint Duel" : `Daily Sprint ${dailyChallengeKey()}`;
   $("resultTitle").textContent = title;
   $("resultStats").innerHTML = `
     <span><strong>${attempts}/6</strong> attempts</span>
@@ -521,7 +646,7 @@ function showResultCard({ won, answer, saved = true }) {
     : `The word was ${answer.toUpperCase()}.`;
   state.lastResultText = [
     "Word Sprint",
-    `${state.mode === "tug" ? "Word Tug" : mode === "duel" ? "Sprint Duel" : "Daily Sprint"} ${won ? "solved" : "finished"}`,
+    `${state.mode === "tug" ? "Word Tug" : state.mode === "race" ? "Word Race" : mode === "duel" ? "Sprint Duel" : "Daily Sprint"} ${won ? "solved" : "finished"}`,
     `${attempts}/6 attempts`,
     `${formatTime(state.elapsedMs)}`,
     `${points.toLocaleString()} points`
@@ -564,6 +689,40 @@ function showTugMatchResult(room) {
   $("resultCard").classList.add("result-overlay");
   $("resultCard").classList.add("tug-match-result");
   document.body.classList.add("tug-result-open");
+  $("resultLeaderboardBtn").classList.remove("hidden");
+  $("resultCard").classList.remove("hidden");
+}
+
+function showRaceMatchResult(room) {
+  if (state.mode !== "race" || !room.matchWinnerId) return;
+  state.finished = true;
+  const youWon = room.matchWinnerId === room.playerId;
+  const scores = room.scores || {};
+  const youScore = scores[room.playerId] || 0;
+  const opponentId = Object.keys(scores).find((id) => id !== room.playerId);
+  const opponentScore = opponentId ? scores[opponentId] || 0 : 0;
+  const opponentName = room.opponent?.name || "Opponent";
+  const winnerName = youWon ? "You" : opponentName;
+  const resultEmoji = youWon ? "🥳" : "🤕";
+  const rounds = room.history?.length || room.roundNumber || 1;
+  $("resultKicker").textContent = "Word Race";
+  $("resultTitle").innerHTML = `${resultEmoji} <span class="race-result-winner">${escapeHtml(winnerName)}</span> won the race`;
+  $("resultStats").innerHTML = `
+    <span><strong>${youScore}</strong>You</span>
+    <span><strong>${rounds}</strong>rounds</span>
+    <span><strong>${opponentScore}</strong>${escapeHtml(opponentName)}</span>
+  `;
+  $("resultNote").textContent = "First to 5 points wins.";
+  state.lastResultText = [
+    "Word Sprint",
+    `Word Race ${youWon ? "win" : "loss"}`,
+    `You ${youScore} - ${opponentScore} ${opponentName}`,
+    `${rounds} rounds`
+  ].join("\n");
+  $("resultCard").classList.add("result-overlay");
+  $("resultCard").classList.add("race-match-result");
+  document.body.classList.add("tug-result-open");
+  $("resultLeaderboardBtn").classList.add("hidden");
   $("resultCard").classList.remove("hidden");
 }
 
@@ -616,22 +775,23 @@ function resetGame({ mode, answer, room }) {
     tugNoticeText: "",
     tugNoticeUntil: 0,
     submittingGuess: false,
-    tugRoundActive: mode !== "tug" && mode !== "duel",
+    tugRoundActive: mode !== "tug" && mode !== "duel" && mode !== "race",
     finished: false,
     animateRow: null,
     roomRoundNumber: room?.roundNumber || 1,
     lastSeenRoundResult: null
   });
 
-  const isRoom = mode === "duel" || mode === "tug";
+  const isRoom = mode === "duel" || mode === "tug" || mode === "race";
   $("modeLabel").textContent = isRoom ? "Room" : "Daily";
-  $("gameTitle").textContent = mode === "tug" ? "Word Tug" : mode === "duel" ? "Sprint Duel" : "Daily Sprint";
+  $("gameTitle").textContent = mode === "tug" ? "Word Tug" : mode === "race" ? "Word Race" : mode === "duel" ? "Sprint Duel" : "Daily Sprint";
   $("roomBadge").classList.toggle("hidden", !isRoom);
   $("helpBtn").classList.toggle("hidden", isRoom);
   $("roomCodeDisplay").textContent = isRoom ? room.code : "";
   $("copyRoomBtn").textContent = "Copy";
   $("opponentPanel").classList.toggle("hidden", !isRoom);
   $("tugPanel").classList.toggle("hidden", mode !== "tug");
+  $("racePanel").classList.toggle("hidden", mode !== "race");
   $("duelReadyPanel").classList.toggle("hidden", mode !== "duel");
   $("opponentName").textContent = "Waiting...";
   hideResultCard();
@@ -639,8 +799,9 @@ function resetGame({ mode, answer, room }) {
   renderKeyboard();
   renderOpponent(null);
   if (mode === "tug") renderTugMeter(room);
+  if (mode === "race") renderRaceMeter(room);
   if (mode === "duel") renderDuelReady(room);
-  setMessage(mode === "tug"
+  setMessage(mode === "tug" || mode === "race"
     ? "Share the room code. Tap Ready when both players join."
     : isRoom
       ? "Share the room code. Tap Ready when both players join."
@@ -705,8 +866,8 @@ function renderKeyboard() {
   }
 }
 
-function shouldResetTugBoard(room) {
-  if (state.mode !== "tug" || !room) return false;
+function shouldResetRoomBoard(room) {
+  if ((state.mode !== "tug" && state.mode !== "race") || !room) return false;
   if (room.roundNumber !== state.roomRoundNumber) return true;
   const serverProgress = room.you?.progress || [];
   return Boolean(
@@ -719,7 +880,7 @@ function shouldResetTugBoard(room) {
 }
 
 function resetRoundFromRoom(room) {
-  if (!shouldResetTugBoard(room)) return;
+  if (!shouldResetRoomBoard(room)) return;
   clearInterval(state.timerId);
   clearInterval(state.countdownId);
   Object.assign(state, {
@@ -745,8 +906,9 @@ function resetRoundFromRoom(room) {
   renderKeyboard();
   $("timer").textContent = formatTime(0);
   $("tugCountdown").classList.add("hidden");
+  $("raceCountdown").classList.add("hidden");
   if (room.roundActive && !room.matchWinnerId) {
-    setMessage(`Round ${room.roundNumber}. Fastest solve wins +1.`);
+    setMessage(state.mode === "race" ? `Round ${room.roundNumber}. First solve scores +1.` : `Round ${room.roundNumber}. Fastest solve wins +1.`);
   }
 }
 
@@ -783,7 +945,7 @@ function scoreGuess(guess, answer) {
 
 function handleKey(key) {
   if (
-    state.mode === "tug" &&
+    (state.mode === "tug" || state.mode === "race") &&
     state.finished &&
     state.room?.roundActive &&
     !state.room?.matchWinnerId &&
@@ -793,8 +955,8 @@ function handleKey(key) {
   }
   if (state.finished) return;
   if (state.submittingGuess) return;
-  if ((state.mode === "duel" || state.mode === "tug") && !state.tugRoundActive) {
-    setMessage(state.mode === "duel" ? "Sprint Duel starts after both players are ready." : "Word Tug starts after both players are ready.");
+  if ((state.mode === "duel" || state.mode === "tug" || state.mode === "race") && !state.tugRoundActive) {
+    setMessage(state.mode === "duel" ? "Sprint Duel starts after both players are ready." : state.mode === "race" ? "Word Race starts after both players are ready." : "Word Tug starts after both players are ready.");
     return;
   }
   if (key === "⌫" || key === "Backspace") {
@@ -818,7 +980,7 @@ function handleKey(key) {
 
 async function submitGuess() {
   if (
-    state.mode === "tug" &&
+    (state.mode === "tug" || state.mode === "race") &&
     state.finished &&
     state.room?.roundActive &&
     !state.room?.matchWinnerId &&
@@ -828,7 +990,7 @@ async function submitGuess() {
   }
   if (state.finished) return;
   if (state.submittingGuess) return;
-  if ((state.mode === "duel" || state.mode === "tug") && !state.tugRoundActive) {
+  if ((state.mode === "duel" || state.mode === "tug" || state.mode === "race") && !state.tugRoundActive) {
     setMessage("Wait for the countdown.");
     return;
   }
@@ -843,7 +1005,7 @@ async function submitGuess() {
     shakeBoard();
     return;
   }
-  if (state.mode === "duel" || state.mode === "tug") {
+  if (state.mode === "duel" || state.mode === "tug" || state.mode === "race") {
     await submitDuelGuess(guess);
     return;
   }
@@ -870,8 +1032,10 @@ async function submitDuelGuess(guess) {
         renderOpponent(data.room.opponent);
         resetRoundFromRoom(data.room);
         renderTugMeter(data.room);
+        renderRaceMeter(data.room);
         renderDuelReady(data.room);
         showTugMatchResult(data.room);
+        showRaceMatchResult(data.room);
         setDuelStatus(data.room);
       }
       setMessage(data.error || "Could not submit that guess.");
@@ -885,13 +1049,15 @@ async function submitDuelGuess(guess) {
       scored: data.result,
       won: data.won,
       answer: data.answer,
-      suppressResult: state.mode === "tug"
+      suppressResult: state.mode === "tug" || state.mode === "race"
     });
     renderOpponent(data.room.opponent);
     resetRoundFromRoom(data.room);
     renderTugMeter(data.room);
+    renderRaceMeter(data.room);
     renderDuelReady(data.room);
     showTugMatchResult(data.room);
+    showRaceMatchResult(data.room);
     setDuelStatus(data.room);
   } catch {
     setMessage("Could not reach the room server.");
@@ -931,7 +1097,7 @@ async function applyGuessResult({ guess, scored, won, answer, suppressResult = f
     clearInterval(state.timerId);
     updateTimer();
     setMessage(won ? `Solved in ${state.row + 1} guesses.` : `The word was ${answer.toUpperCase()}.`);
-    const saved = won && state.mode !== "duel" && state.mode !== "tug" ? await saveLeaderboard() : true;
+    const saved = won && state.mode !== "duel" && state.mode !== "tug" && state.mode !== "race" ? await saveLeaderboard() : true;
     if (!suppressResult) showResultCard({ won, answer, saved });
     return;
   }
@@ -988,8 +1154,10 @@ async function pollRoom() {
     renderOpponent(data.room.opponent);
     resetRoundFromRoom(data.room);
     renderTugMeter(data.room);
+    renderRaceMeter(data.room);
     renderDuelReady(data.room);
     showTugMatchResult(data.room);
+    showRaceMatchResult(data.room);
     setDuelStatus(data.room);
   } catch {
     clearInterval(state.pollId);
@@ -997,7 +1165,7 @@ async function pollRoom() {
 }
 
 async function readyForRoom() {
-  if ((state.mode !== "duel" && state.mode !== "tug") || !state.room) return;
+  if ((state.mode !== "duel" && state.mode !== "tug" && state.mode !== "race") || !state.room) return;
   try {
     const response = await fetch(apiUrl(`rooms/${state.room.code}/${state.room.playerId}/ready`), {
       method: "POST"
@@ -1009,6 +1177,7 @@ async function readyForRoom() {
     }
     state.room = data.room;
     renderTugMeter(data.room);
+    renderRaceMeter(data.room);
     renderDuelReady(data.room);
     setDuelStatus(data.room);
   } catch {
@@ -1054,7 +1223,7 @@ async function createRoom(mode = "duel") {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Could not create room");
-    resetGame({ mode: data.room.mode === "tug" ? "tug" : "duel", answer: "", room: data.room });
+    resetGame({ mode: roomMode(data.room.mode), answer: "", room: data.room });
   } catch {
     $("menuStatus").textContent = "Could not create a room. The backend is unavailable.";
   }
@@ -1099,7 +1268,7 @@ async function submitJoinRoom() {
       $("menuStatus").scrollIntoView({ block: "nearest" });
       return;
     }
-    resetGame({ mode: data.room.mode === "tug" ? "tug" : "duel", answer: "", room: data.room });
+    resetGame({ mode: roomMode(data.room.mode), answer: "", room: data.room });
   } catch {
     $("menuStatus").textContent = "Could not join. The backend is unavailable.";
     $("roomCodeInput").select();
@@ -1126,7 +1295,7 @@ async function showLeaderboard() {
 
 function normalizeMode(mode) {
   const value = String(mode || "").toLowerCase();
-  if (value === "duel" || value === "tug") return value;
+  if (value === "duel" || value === "tug" || value === "race") return value;
   return "daily";
 }
 
@@ -1312,6 +1481,7 @@ $("duelBackBtn").addEventListener("click", () => {
 });
 $("createRoomBtn").addEventListener("click", () => createRoom("duel"));
 $("createTugRoomBtn").addEventListener("click", () => createRoom("tug"));
+$("createRaceRoomBtn").addEventListener("click", () => createRoom("race"));
 $("joinRoomBtn").addEventListener("click", showJoinRoomForm);
 $("submitJoinRoomBtn").addEventListener("click", submitJoinRoom);
 $("roomCodeInput").addEventListener("keydown", (event) => {
@@ -1326,6 +1496,7 @@ $("leaderBackBtn").addEventListener("click", () => {
 $("copyRoomBtn").addEventListener("click", copyRoomCode);
 $("tugReadyBtn").addEventListener("click", readyForRoom);
 $("duelReadyBtn").addEventListener("click", readyForRoom);
+$("raceReadyBtn").addEventListener("click", readyForRoom);
 $("shareResultBtn").addEventListener("click", shareResult);
 $("resultLeaderboardBtn").addEventListener("click", () => {
   state.activeLeaderboardMode = modeLabel(state.mode);
@@ -1385,10 +1556,12 @@ async function checkBackend() {
   }
   $("createRoomBtn").disabled = !state.backendAvailable;
   $("createTugRoomBtn").disabled = !state.backendAvailable;
+  $("createRaceRoomBtn").disabled = !state.backendAvailable;
   $("joinRoomBtn").disabled = !state.backendAvailable;
   $("submitJoinRoomBtn").disabled = !state.backendAvailable;
   $("createRoomBtn").title = state.backendAvailable ? "" : "Requires the Node backend or a realtime hosting service.";
   $("createTugRoomBtn").title = state.backendAvailable ? "" : "Requires the Node backend or a realtime hosting service.";
+  $("createRaceRoomBtn").title = state.backendAvailable ? "" : "Requires the Node backend or a realtime hosting service.";
   $("joinRoomBtn").title = state.backendAvailable ? "" : "Requires the Node backend or a realtime hosting service.";
   if (!state.backendAvailable && WORDS.answers.length) {
     $("menuStatus").textContent = `${WORDS.answers.length.toLocaleString()} answer words loaded. Daily Sprint is ready.`;
@@ -1398,6 +1571,7 @@ async function checkBackend() {
 $("soloBtn").disabled = true;
 $("createRoomBtn").disabled = true;
 $("createTugRoomBtn").disabled = true;
+$("createRaceRoomBtn").disabled = true;
 $("joinRoomBtn").disabled = true;
 $("submitJoinRoomBtn").disabled = true;
 initTheme();
