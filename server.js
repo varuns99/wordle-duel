@@ -9,8 +9,12 @@ const PUBLIC_DIR = path.join(__dirname, "public");
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 const LEADERBOARD_FILE = path.join(DATA_DIR, "leaderboard.json");
 const WORDS_FILE = path.join(PUBLIC_DIR, "words.json");
+const SUPABASE_URL = process.env.SUPABASE_URL || "";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const LEADERBOARD_TABLE = "leaderboard_scores";
 
 const rooms = new Map();
+let supabaseClientPromise = null;
 const wordData = JSON.parse(fs.readFileSync(WORDS_FILE, "utf8"));
 const words = wordData.answers;
 const validGuesses = new Set(wordData.validGuesses || wordData.answers);
@@ -53,6 +57,27 @@ function writeLeaderboard(entries) {
   fs.writeFileSync(LEADERBOARD_FILE, JSON.stringify(entries.slice(-1000), null, 2));
 }
 
+function useSupabaseLeaderboard() {
+  return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+}
+
+async function getSupabaseClient() {
+  if (!useSupabaseLeaderboard()) return null;
+  if (!supabaseClientPromise) {
+    supabaseClientPromise = import("@supabase/supabase-js").then(({ createClient }) => createClient(
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    ));
+  }
+  return supabaseClientPromise;
+}
+
 function calculatePoints(attempts, elapsedMs) {
   const safeAttempts = Math.min(6, Math.max(1, Number(attempts) || 6));
   const safeElapsedMs = Math.max(0, Number(elapsedMs) || 0);
@@ -77,6 +102,36 @@ function normalizeScore(input) {
     points: calculatePoints(attempts, elapsedMs),
     solvedAt: input.solvedAt || new Date().toISOString()
   };
+}
+
+function scoreToRow(score) {
+  return {
+    id: score.id,
+    game_id: score.gameId,
+    challenge_key: score.challengeKey,
+    name: score.name,
+    loser_name: score.loserName,
+    mode: score.mode,
+    attempts: score.attempts,
+    elapsed_ms: score.elapsedMs,
+    points: score.points,
+    solved_at: score.solvedAt
+  };
+}
+
+function rowToScore(row) {
+  return normalizeScore({
+    id: row.id,
+    gameId: row.game_id,
+    challengeKey: row.challenge_key,
+    name: row.name,
+    loserName: row.loser_name,
+    mode: row.mode,
+    attempts: row.attempts,
+    elapsedMs: row.elapsed_ms,
+    points: row.points,
+    solvedAt: row.solved_at
+  });
 }
 
 function aggregateLeaderboard(entries) {
@@ -117,7 +172,24 @@ function aggregateLeaderboard(entries) {
     .sort((a, b) => b.totalPoints - a.totalPoints || b.bestPoints - a.bestPoints || a.bestElapsedMs - b.bestElapsedMs);
 }
 
-function recordLeaderboardScore(score) {
+async function readLeaderboardEntries() {
+  if (!useSupabaseLeaderboard()) {
+    return readLeaderboard().map(normalizeScore);
+  }
+  const supabase = await getSupabaseClient();
+  const { data, error } = await supabase
+    .from(LEADERBOARD_TABLE)
+    .select("*")
+    .order("solved_at", { ascending: false })
+    .limit(1000);
+  if (error) throw error;
+  return (data || []).map(rowToScore).sort((a, b) => new Date(a.solvedAt) - new Date(b.solvedAt));
+}
+
+async function recordLeaderboardScore(score) {
+  if (useSupabaseLeaderboard()) {
+    return recordSupabaseLeaderboardScore(score);
+  }
   const entries = readLeaderboard().map(normalizeScore);
   const normalized = normalizeScore(score);
   if (normalized.gameId && entries.some((entry) => entry.gameId === normalized.gameId)) {
@@ -137,6 +209,52 @@ function recordLeaderboardScore(score) {
   entries.push(normalized);
   entries.sort((a, b) => new Date(a.solvedAt) - new Date(b.solvedAt));
   writeLeaderboard(entries);
+  return { entries, players: aggregateLeaderboard(entries), saved: true };
+}
+
+async function recordSupabaseLeaderboardScore(score) {
+  const supabase = await getSupabaseClient();
+  const normalized = normalizeScore(score);
+
+  if (normalized.gameId) {
+    const { data, error } = await supabase
+      .from(LEADERBOARD_TABLE)
+      .select("id")
+      .eq("game_id", normalized.gameId)
+      .maybeSingle();
+    if (error) throw error;
+    if (data) {
+      const entries = await readLeaderboardEntries();
+      return { entries, players: aggregateLeaderboard(entries), saved: false };
+    }
+  }
+
+  if (normalized.mode === "daily" && normalized.challengeKey) {
+    const normalizedName = normalized.name.trim().toLowerCase();
+    const { data, error } = await supabase
+      .from(LEADERBOARD_TABLE)
+      .select("name")
+      .eq("mode", "daily")
+      .eq("challenge_key", normalized.challengeKey);
+    if (error) throw error;
+    if ((data || []).some((entry) => String(entry.name || "").trim().toLowerCase() === normalizedName)) {
+      const entries = await readLeaderboardEntries();
+      return { entries, players: aggregateLeaderboard(entries), saved: false };
+    }
+  }
+
+  const { error } = await supabase
+    .from(LEADERBOARD_TABLE)
+    .insert(scoreToRow(normalized));
+  if (error) {
+    if (normalized.gameId && error.code === "23505") {
+      const entries = await readLeaderboardEntries();
+      return { entries, players: aggregateLeaderboard(entries), saved: false };
+    }
+    throw error;
+  }
+
+  const entries = await readLeaderboardEntries();
   return { entries, players: aggregateLeaderboard(entries), saved: true };
 }
 
@@ -338,7 +456,7 @@ function isStaleRaceGuess(room, body) {
   return Number.isInteger(submittedRoundNumber) && submittedRoundNumber !== (room.roundNumber || 1);
 }
 
-function maybeResolveTugRound(room) {
+async function maybeResolveTugRound(room) {
   if (room.mode !== "tug" || room.matchWinnerId) return null;
   const playerIds = Object.keys(room.players);
   if (playerIds.length < 2) return null;
@@ -393,7 +511,7 @@ function maybeResolveTugRound(room) {
     });
     if (room.scores[winnerId] >= room.targetScore) {
       room.matchWinnerId = winnerId;
-      recordLeaderboardScore({
+      await recordLeaderboardScore({
         gameId: `${room.code}:tug:${winnerId}`,
         name: room.players[winnerId].name,
         loserName: loserId ? room.players[loserId].name : null,
@@ -526,14 +644,14 @@ function sendStatic(req, res) {
 async function handleApi(req, res) {
   try {
     if (req.method === "GET" && req.url === "/api/leaderboard") {
-      const entries = readLeaderboard().map(normalizeScore);
+      const entries = await readLeaderboardEntries();
       json(res, 200, { entries, players: aggregateLeaderboard(entries) });
       return;
     }
 
     if (req.method === "POST" && req.url === "/api/leaderboard") {
       const body = await readBody(req);
-      const result = recordLeaderboardScore({
+      const result = await recordLeaderboardScore({
         name: body.name,
         loserName: body.loserName,
         mode: body.mode,
@@ -713,7 +831,7 @@ async function handleApi(req, res) {
           player.solvedAt = player.finishedAt;
           player.scoreRecorded = true;
           if (room.mode !== "tug" && room.mode !== "race") {
-            recordLeaderboardScore({
+            await recordLeaderboardScore({
               gameId: `${room.code}:${playerId}`,
               name: player.name,
               mode: "duel",
@@ -726,7 +844,7 @@ async function handleApi(req, res) {
         const startedAt = player.startedAt;
         const attempts = player.progress.length;
         const elapsedMs = player.elapsedMs;
-        const roundResult = room.mode === "tug" ? maybeResolveTugRound(room) : room.mode === "race" ? maybeResolveRaceRound(room) : null;
+        const roundResult = room.mode === "tug" ? await maybeResolveTugRound(room) : room.mode === "race" ? maybeResolveRaceRound(room) : null;
         json(res, 200, {
           result,
           won,

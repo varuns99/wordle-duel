@@ -42,6 +42,8 @@ function startServer() {
       PORT: String(PORT),
       HOST: "127.0.0.1",
       DATA_DIR: dataDir,
+      SUPABASE_URL: "",
+      SUPABASE_SERVICE_ROLE_KEY: "",
       TUG_COUNTDOWN_MS: "80",
       TUG_WORD_SEQUENCE: TUG_TEST_WORDS.join(","),
       RACE_WORD_SEQUENCE: RACE_TEST_WORDS.join(",")
@@ -212,6 +214,49 @@ async function testSprintDuelReadyCountdown() {
   assert.equal(solved.response.status, 200);
   assert.equal(solved.payload.won, true);
   assert.ok(solved.payload.startedAt <= Date.now());
+}
+
+async function testLeaderboardFallbackDuplicates() {
+  const dailyEntry = {
+    name: "  Alpha  ",
+    mode: "daily",
+    attempts: 3,
+    elapsedMs: 1200,
+    challengeKey: "2026-06-14",
+    gameId: "daily:2026-06-14:alpha"
+  };
+  const firstDaily = await post("/leaderboard", dailyEntry);
+  assert.equal(firstDaily.response.status, 200);
+  assert.equal(firstDaily.payload.saved, true);
+
+  const duplicateDaily = await post("/leaderboard", {
+    ...dailyEntry,
+    name: "alpha",
+    gameId: "daily:2026-06-14:alpha-duplicate-attempt"
+  });
+  assert.equal(duplicateDaily.response.status, 200);
+  assert.equal(duplicateDaily.payload.saved, false);
+  assert.equal(duplicateDaily.payload.entries.filter((entry) => entry.mode === "daily" && entry.challengeKey === "2026-06-14").length, 1);
+
+  const duelEntry = {
+    name: "Bravo",
+    mode: "duel",
+    attempts: 2,
+    elapsedMs: 900,
+    gameId: "room-1:bravo"
+  };
+  const firstDuel = await post("/leaderboard", duelEntry);
+  assert.equal(firstDuel.response.status, 200);
+  assert.equal(firstDuel.payload.saved, true);
+
+  const duplicateDuel = await post("/leaderboard", {
+    ...duelEntry,
+    attempts: 1,
+    elapsedMs: 100
+  });
+  assert.equal(duplicateDuel.response.status, 200);
+  assert.equal(duplicateDuel.payload.saved, false);
+  assert.equal(duplicateDuel.payload.entries.filter((entry) => entry.gameId === duelEntry.gameId).length, 1);
 }
 
 async function testHappyPath() {
@@ -436,6 +481,7 @@ async function run() {
   const server = startServer();
   try {
     await server.ready();
+    await testLeaderboardFallbackDuplicates();
     await testSprintDuelReadyCountdown();
     await testHappyPath();
     await testRaceHappyPath();
