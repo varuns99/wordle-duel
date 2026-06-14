@@ -10,7 +10,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-180.png">
-    <link rel="stylesheet" href="styles.css?v=0.6.0">
+    <link rel="stylesheet" href="styles.css?v=0.6.2">
   </head>
   <body data-word-list-url="words.json" data-api-base="api" data-service-worker-url="sw.js">
     <main class="shell">
@@ -123,7 +123,7 @@
               <span id="youRaceScore">0/5</span>
             </div>
             <div class="race-track" aria-label="Your Word Race meter">
-              <span id="youRaceCar" class="race-car">🏎️</span>
+              <span id="youRaceCar" class="race-car"><span class="race-car-icon">🏎️</span></span>
               <span class="race-finish" aria-hidden="true">🏁</span>
             </div>
           </div>
@@ -133,7 +133,7 @@
               <span id="opponentRaceScore">0/5</span>
             </div>
             <div class="race-track" aria-label="Opponent Word Race meter">
-              <span id="opponentRaceCar" class="race-car">🏎️</span>
+              <span id="opponentRaceCar" class="race-car"><span class="race-car-icon">🏎️</span></span>
               <span class="race-finish" aria-hidden="true">🏁</span>
             </div>
           </div>
@@ -197,8 +197,8 @@
       </div>
     </div>
     <div id="themeWave" class="theme-wave hidden" aria-hidden="true"></div>
-    <div class="version-badge" aria-label="App version">v0.6.0</div>
+    <div class="version-badge" aria-label="App version">v0.6.2</div>
 
-    <script src="app.js?v=0.6.0"></script>
+    <script src="app.js?v=0.6.2"></script>
   </body>
 </html>
