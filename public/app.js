@@ -91,6 +91,12 @@ function initTheme() {
 
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
   window.addEventListener("load", () => {
     navigator.serviceWorker.register(SERVICE_WORKER_URL).catch(() => {
       // Install support is a progressive enhancement; gameplay should continue.
