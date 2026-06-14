@@ -65,7 +65,7 @@ function startServer() {
     async ready() {
       for (let i = 0; i < 80; i += 1) {
         try {
-          const response = await fetch(`${BASE}/leaderboard`);
+          const response = await fetch(`${BASE}/health`);
           if (response.ok) return;
         } catch {
           await new Promise((resolve) => setTimeout(resolve, 50));
@@ -96,6 +96,14 @@ async function post(pathName, body) {
 
 async function get(pathName) {
   return api("GET", pathName);
+}
+
+async function testHealthEndpoint() {
+  const health = await get("/health");
+  assert.equal(health.response.status, 200);
+  assert.equal(health.payload.ok, true);
+  assert.equal(health.payload.rooms, true);
+  assert.equal(typeof health.payload.serverNow, "number");
 }
 
 async function createReadyTugRoom() {
@@ -482,6 +490,7 @@ async function run() {
   try {
     await server.ready();
     await testLeaderboardFallbackDuplicates();
+    await testHealthEndpoint();
     await testSprintDuelReadyCountdown();
     await testHappyPath();
     await testRaceHappyPath();

@@ -1,5 +1,5 @@
 {
-  "version": "0.6.4",
+  "version": "0.6.5",
   "scripts": {
     "start": "node server.js",
     "test:word-tug": "node tests/word-tug-api.test.js"
