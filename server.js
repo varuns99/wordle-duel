@@ -643,6 +643,15 @@ function sendStatic(req, res) {
 
 async function handleApi(req, res) {
   try {
+    if (req.method === "GET" && req.url === "/api/health") {
+      json(res, 200, {
+        ok: true,
+        rooms: true,
+        serverNow: Date.now()
+      });
+      return;
+    }
+
     if (req.method === "GET" && req.url === "/api/leaderboard") {
       const entries = await readLeaderboardEntries();
       json(res, 200, { entries, players: aggregateLeaderboard(entries) });

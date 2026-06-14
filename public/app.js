@@ -1555,7 +1555,7 @@ async function fetchWordList() {
 
 async function checkBackend() {
   try {
-    const response = await fetch(apiUrl("leaderboard"));
+    const response = await fetch(apiUrl("health"), { cache: "no-store" });
     state.backendAvailable = response.ok;
   } catch {
     state.backendAvailable = false;
