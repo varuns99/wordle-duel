@@ -85,11 +85,12 @@ function calculatePoints(attempts, elapsedMs) {
   return Math.max(0, Math.round(10000 - safeAttempts * 1000 - seconds * 10));
 }
 
-function normalizeScore(input) {
+function normalizeScore(input, preservePoints = false) {
   const attempts = Math.min(6, Math.max(1, Number(input.attempts || 0)));
   const elapsedMs = Math.max(0, Number(input.elapsedMs || 0));
   const inputMode = String(input.mode || "").toLowerCase();
   const mode = inputMode === "duel" || inputMode === "tug" || inputMode === "race" ? inputMode : "daily";
+  const explicitPoints = Number(input.points);
   return {
     id: input.id || randomUUID(),
     gameId: input.gameId || null,
@@ -99,7 +100,9 @@ function normalizeScore(input) {
     mode,
     attempts,
     elapsedMs,
-    points: calculatePoints(attempts, elapsedMs),
+    points: preservePoints && Number.isFinite(explicitPoints)
+      ? Math.max(0, Math.round(explicitPoints))
+      : calculatePoints(attempts, elapsedMs),
     solvedAt: input.solvedAt || new Date().toISOString()
   };
 }
@@ -131,7 +134,7 @@ function rowToScore(row) {
     elapsedMs: row.elapsed_ms,
     points: row.points,
     solvedAt: row.solved_at
-  });
+  }, true);
 }
 
 function aggregateLeaderboard(entries) {
@@ -174,7 +177,7 @@ function aggregateLeaderboard(entries) {
 
 async function readLeaderboardEntries() {
   if (!useSupabaseLeaderboard()) {
-    return readLeaderboard().map(normalizeScore);
+    return readLeaderboard().map((entry) => normalizeScore(entry, true));
   }
   const supabase = await getSupabaseClient();
   const { data, error } = await supabase
@@ -186,12 +189,12 @@ async function readLeaderboardEntries() {
   return (data || []).map(rowToScore).sort((a, b) => new Date(a.solvedAt) - new Date(b.solvedAt));
 }
 
-async function recordLeaderboardScore(score) {
+async function recordLeaderboardScore(score, preservePoints = false) {
   if (useSupabaseLeaderboard()) {
-    return recordSupabaseLeaderboardScore(score);
+    return recordSupabaseLeaderboardScore(score, preservePoints);
   }
-  const entries = readLeaderboard().map(normalizeScore);
-  const normalized = normalizeScore(score);
+  const entries = readLeaderboard().map((entry) => normalizeScore(entry, true));
+  const normalized = normalizeScore(score, preservePoints);
   if (normalized.gameId && entries.some((entry) => entry.gameId === normalized.gameId)) {
     return { entries, players: aggregateLeaderboard(entries), saved: false };
   }
@@ -212,9 +215,9 @@ async function recordLeaderboardScore(score) {
   return { entries, players: aggregateLeaderboard(entries), saved: true };
 }
 
-async function recordSupabaseLeaderboardScore(score) {
+async function recordSupabaseLeaderboardScore(score, preservePoints = false) {
   const supabase = await getSupabaseClient();
-  const normalized = normalizeScore(score);
+  const normalized = normalizeScore(score, preservePoints);
 
   if (normalized.gameId) {
     const { data, error } = await supabase
@@ -530,7 +533,7 @@ async function maybeResolveTugRound(room) {
   return summary;
 }
 
-function maybeResolveRaceRound(room) {
+async function maybeResolveRaceRound(room) {
   if (room.mode !== "race" || room.matchWinnerId) return null;
   const playerIds = Object.keys(room.players);
   if (playerIds.length < 2) return null;
@@ -570,6 +573,30 @@ function maybeResolveRaceRound(room) {
     });
     if (room.scores[winnerId] >= room.targetScore) {
       room.matchWinnerId = winnerId;
+      const loserId = playerIds.find((id) => id !== winnerId);
+      const loserName = loserId ? room.players[loserId].name : null;
+      const elapsedMs = Date.now() - room.startedAt;
+      await recordLeaderboardScore({
+        gameId: `${room.code}:race:${winnerId}:win`,
+        name: room.players[winnerId].name,
+        loserName,
+        mode: "race",
+        attempts: room.history.length,
+        elapsedMs,
+        points: room.scores[winnerId] || 0,
+        solvedAt: new Date().toISOString()
+      }, true);
+      if (loserId) {
+        await recordLeaderboardScore({
+          gameId: `${room.code}:race:${loserId}:points`,
+          name: room.players[loserId].name,
+          mode: "race",
+          attempts: room.history.length,
+          elapsedMs,
+          points: room.scores[loserId] || 0,
+          solvedAt: new Date().toISOString()
+        }, true);
+      }
     }
   }
 
@@ -762,7 +789,7 @@ async function handleApi(req, res) {
           return;
         }
         if (room.mode === "duel" && Object.values(room.players).some((participant) => participant.progress.length > 0 || participant.finishedAt)) {
-          json(res, 409, { error: "Sprint Duel already started" });
+          json(res, 409, { error: "Daily Word - Duel already started" });
           return;
         }
         room.ready = room.ready || {};
@@ -853,7 +880,7 @@ async function handleApi(req, res) {
         const startedAt = player.startedAt;
         const attempts = player.progress.length;
         const elapsedMs = player.elapsedMs;
-        const roundResult = room.mode === "tug" ? await maybeResolveTugRound(room) : room.mode === "race" ? maybeResolveRaceRound(room) : null;
+        const roundResult = room.mode === "tug" ? await maybeResolveTugRound(room) : room.mode === "race" ? await maybeResolveRaceRound(room) : null;
         json(res, 200, {
           result,
           won,

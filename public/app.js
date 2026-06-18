@@ -271,6 +271,49 @@ function aggregateTugLeaderboard(entries) {
     .sort((a, b) => b.wins - a.wins || b.winRate - a.winRate || a.losses - b.losses || a.name.localeCompare(b.name));
 }
 
+function aggregateRaceLeaderboard(entries) {
+  const players = new Map();
+  const ensurePlayer = (name) => {
+    const displayName = String(name || "Player").slice(0, 24);
+    const key = displayName.trim().toLowerCase() || "player";
+    const current = players.get(key) || {
+      name: displayName,
+      wins: 0,
+      losses: 0,
+      roundPoints: 0,
+      games: 0,
+      lastSolvedAt: ""
+    };
+    if ((current.lastSolvedAt || "") === "") current.name = displayName;
+    players.set(key, current);
+    return current;
+  };
+
+  for (const entry of entries) {
+    const player = ensurePlayer(entry.name);
+    player.games += 1;
+    player.roundPoints += Math.max(0, Math.round(Number(entry.points) || 0));
+    if (entry.loserName) {
+      player.wins += 1;
+      const loser = ensurePlayer(entry.loserName);
+      loser.losses += 1;
+      if ((entry.solvedAt || "") > loser.lastSolvedAt) loser.lastSolvedAt = entry.solvedAt || "";
+    }
+    if ((entry.solvedAt || "") > player.lastSolvedAt) {
+      player.name = String(entry.name || "Player").slice(0, 24);
+      player.lastSolvedAt = entry.solvedAt || "";
+    }
+  }
+
+  return [...players.values()]
+    .map((player) => ({
+      ...player,
+      matches: player.wins + player.losses,
+      winRate: player.wins + player.losses ? player.wins / (player.wins + player.losses) : 0
+    }))
+    .sort((a, b) => b.wins - a.wins || b.roundPoints - a.roundPoints || b.winRate - a.winRate || a.name.localeCompare(b.name));
+}
+
 function setMessage(text) {
   $("message").textContent = text;
 }
@@ -336,7 +379,7 @@ function setDuelStatus(room) {
     setMessage(`Opponent is solving: ${opponent.attempts}/6 attempts used.`);
     return;
   }
-  setMessage("Sprint Duel started. Solve fast.");
+  setMessage("Daily Word - Duel started. Solve fast.");
 }
 
 function roomReadyState(room) {
@@ -551,7 +594,7 @@ function renderRaceMeter(room) {
   }
 
   if (room.matchWinnerId) {
-    $("raceRoundStatus").textContent = youWon ? "You won Word Race." : `${opponentName} won Word Race.`;
+    $("raceRoundStatus").textContent = youWon ? "You won Point Race." : `${opponentName} won Point Race.`;
   } else if (room.lastRound && state.lastSeenRoundResult !== `${room.lastRound.roundNumber}:${room.lastRound.winnerId}:${room.lastRound.points}:${room.lastRound.reason}`) {
     state.lastSeenRoundResult = `${room.lastRound.roundNumber}:${room.lastRound.winnerId}:${room.lastRound.points}:${room.lastRound.reason}`;
     state.tugNoticeText = raceRoundNotice(room, opponentName);
@@ -638,7 +681,7 @@ function showResultCard({ won, answer, saved = true }) {
   $("resultCard").classList.remove("race-match-result");
   document.body.classList.remove("tug-result-open");
   $("resultLeaderboardBtn").classList.remove("hidden");
-  $("resultKicker").textContent = state.mode === "tug" ? "Word Tug" : state.mode === "race" ? "Word Race" : mode === "duel" ? "Sprint Duel" : `Daily Sprint ${dailyChallengeKey()}`;
+  $("resultKicker").textContent = state.mode === "tug" ? "Word Tug" : state.mode === "race" ? "Point Race" : mode === "duel" ? "Daily Word - Duel" : `Daily Word - Solo ${dailyChallengeKey()}`;
   $("resultTitle").textContent = title;
   $("resultStats").innerHTML = `
     <span><strong>${attempts}/6</strong> attempts</span>
@@ -652,7 +695,7 @@ function showResultCard({ won, answer, saved = true }) {
     : `The word was ${answer.toUpperCase()}.`;
   state.lastResultText = [
     "Word Sprint",
-    `${state.mode === "tug" ? "Word Tug" : state.mode === "race" ? "Word Race" : mode === "duel" ? "Sprint Duel" : "Daily Sprint"} ${won ? "solved" : "finished"}`,
+    `${state.mode === "tug" ? "Word Tug" : state.mode === "race" ? "Point Race" : mode === "duel" ? "Daily Word - Duel" : "Daily Word - Solo"} ${won ? "solved" : "finished"}`,
     `${attempts}/6 attempts`,
     `${formatTime(state.elapsedMs)}`,
     `${points.toLocaleString()} points`
@@ -711,7 +754,7 @@ function showRaceMatchResult(room) {
   const winnerName = youWon ? "You" : opponentName;
   const resultEmoji = youWon ? "🥳" : "🤕";
   const rounds = room.history?.length || room.roundNumber || 1;
-  $("resultKicker").textContent = "Word Race";
+  $("resultKicker").textContent = "Point Race";
   $("resultTitle").innerHTML = `${resultEmoji} <span class="race-result-winner">${escapeHtml(winnerName)}</span> won the race`;
   $("resultStats").innerHTML = `
     <span><strong>${youScore}</strong>You</span>
@@ -721,14 +764,14 @@ function showRaceMatchResult(room) {
   $("resultNote").textContent = "First to 5 points wins.";
   state.lastResultText = [
     "Word Sprint",
-    `Word Race ${youWon ? "win" : "loss"}`,
+    `Point Race ${youWon ? "win" : "loss"}`,
     `You ${youScore} - ${opponentScore} ${opponentName}`,
     `${rounds} rounds`
   ].join("\n");
   $("resultCard").classList.add("result-overlay");
   $("resultCard").classList.add("race-match-result");
   document.body.classList.add("tug-result-open");
-  $("resultLeaderboardBtn").classList.add("hidden");
+  $("resultLeaderboardBtn").classList.remove("hidden");
   $("resultCard").classList.remove("hidden");
 }
 
@@ -790,7 +833,7 @@ function resetGame({ mode, answer, room }) {
 
   const isRoom = mode === "duel" || mode === "tug" || mode === "race";
   $("modeLabel").textContent = isRoom ? "Room" : "Daily";
-  $("gameTitle").textContent = mode === "tug" ? "Word Tug" : mode === "race" ? "Word Race" : mode === "duel" ? "Sprint Duel" : "Daily Sprint";
+  $("gameTitle").textContent = mode === "tug" ? "Word Tug" : mode === "race" ? "Point Race" : mode === "duel" ? "Daily Word - Duel" : "Daily Word - Solo";
   $("roomBadge").classList.toggle("hidden", !isRoom);
   $("helpBtn").classList.toggle("hidden", isRoom);
   $("roomCodeDisplay").textContent = isRoom ? room.code : "";
@@ -811,7 +854,7 @@ function resetGame({ mode, answer, room }) {
     ? "Share the room code. Tap Ready when both players join."
     : isRoom
       ? "Share the room code. Tap Ready when both players join."
-      : `Daily Sprint ${dailyChallengeKey()}.`);
+      : `Daily Word - Solo ${dailyChallengeKey()}.`);
   $("timer").textContent = formatTime(0);
   showView("gameView");
 
@@ -962,7 +1005,7 @@ function handleKey(key) {
   if (state.finished) return;
   if (state.submittingGuess) return;
   if ((state.mode === "duel" || state.mode === "tug" || state.mode === "race") && !state.tugRoundActive) {
-    setMessage(state.mode === "duel" ? "Sprint Duel starts after both players are ready." : state.mode === "race" ? "Word Race starts after both players are ready." : "Word Tug starts after both players are ready.");
+    setMessage(state.mode === "duel" ? "Daily Word - Duel starts after both players are ready." : state.mode === "race" ? "Point Race starts after both players are ready." : "Word Tug starts after both players are ready.");
     return;
   }
   if (key === "⌫" || key === "Backspace") {
@@ -1389,20 +1432,70 @@ function renderTugLeaderboardSection(list, players) {
   list.append(section);
 }
 
+function renderRaceLeaderboardSection(list, players) {
+  const section = document.createElement("section");
+  section.className = "leader-section";
+  const titleEl = document.createElement("h3");
+  titleEl.textContent = "Point Race";
+  section.append(titleEl);
+  if (!players.length) {
+    const empty = document.createElement("p");
+    empty.className = "leader-empty";
+    empty.textContent = "No Point Race scores yet.";
+    section.append(empty);
+    list.append(section);
+    return;
+  }
+  const header = document.createElement("div");
+  header.className = "leader-row leader-header tug-leader-row";
+  header.innerHTML = `
+    <span>Rank</span>
+    <span>Name</span>
+    <span>Wins</span>
+    <span>Losses</span>
+    <span>Points</span>
+    <span class="mode-cell">Win %</span>
+  `;
+  section.append(header);
+  players.slice(0, 20).forEach((player, index) => {
+    const row = document.createElement("div");
+    row.className = "leader-row tug-leader-row";
+    row.innerHTML = `
+      <span>#${index + 1}</span>
+      <strong>${escapeHtml(player.name)}</strong>
+      <span>${player.wins}</span>
+      <span>${player.losses}</span>
+      <span>${player.roundPoints}</span>
+      <span class="mode-cell">${Math.round(player.winRate * 100)}%</span>
+    `;
+    section.append(row);
+  });
+  list.append(section);
+}
+
 function renderLeaderboard() {
   const list = $("leaderboardList");
   $("dailyTabBtn").classList.toggle("active", state.activeLeaderboardMode === "daily");
   $("duelTabBtn").classList.toggle("active", state.activeLeaderboardMode === "duel");
   $("tugTabBtn").classList.toggle("active", state.activeLeaderboardMode === "tug");
+  $("raceTabBtn").classList.toggle("active", state.activeLeaderboardMode === "race");
   $("dailyTabBtn").setAttribute("aria-selected", String(state.activeLeaderboardMode === "daily"));
   $("duelTabBtn").setAttribute("aria-selected", String(state.activeLeaderboardMode === "duel"));
   $("tugTabBtn").setAttribute("aria-selected", String(state.activeLeaderboardMode === "tug"));
-  const title = state.activeLeaderboardMode === "duel" ? "Sprint Duel" : "Daily Sprint";
+  $("raceTabBtn").setAttribute("aria-selected", String(state.activeLeaderboardMode === "race"));
+  const title = state.activeLeaderboardMode === "duel" ? "Daily Word - Duel" : "Daily Word - Solo";
   list.innerHTML = "";
   if (state.activeLeaderboardMode === "tug") {
     renderTugLeaderboardSection(
       list,
       aggregateTugLeaderboard(state.leaderboardEntries.filter((entry) => normalizeMode(entry.mode) === "tug"))
+    );
+    return;
+  }
+  if (state.activeLeaderboardMode === "race") {
+    renderRaceLeaderboardSection(
+      list,
+      aggregateRaceLeaderboard(state.leaderboardEntries.filter((entry) => normalizeMode(entry.mode) === "race"))
     );
     return;
   }
@@ -1512,6 +1605,7 @@ $("resultLeaderboardBtn").addEventListener("click", () => {
 $("dailyTabBtn").addEventListener("click", () => setLeaderboardMode("daily"));
 $("duelTabBtn").addEventListener("click", () => setLeaderboardMode("duel"));
 $("tugTabBtn").addEventListener("click", () => setLeaderboardMode("tug"));
+$("raceTabBtn").addEventListener("click", () => setLeaderboardMode("race"));
 $("helpBtn").addEventListener("click", openHelp);
 $("closeHelpBtn").addEventListener("click", closeHelp);
 $("helpModal").addEventListener("click", (event) => {
@@ -1570,7 +1664,7 @@ async function checkBackend() {
   $("createRaceRoomBtn").title = state.backendAvailable ? "" : "Requires the Node backend or a realtime hosting service.";
   $("joinRoomBtn").title = state.backendAvailable ? "" : "Requires the Node backend or a realtime hosting service.";
   if (!state.backendAvailable && WORDS.answers.length) {
-    $("menuStatus").textContent = `${WORDS.answers.length.toLocaleString()} answer words loaded. Daily Sprint is ready.`;
+    $("menuStatus").textContent = `${WORDS.answers.length.toLocaleString()} answer words loaded. Daily Word - Solo is ready.`;
   }
 }
 

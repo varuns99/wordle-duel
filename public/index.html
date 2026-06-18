@@ -10,13 +10,13 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-180.png">
-    <link rel="stylesheet" href="styles.css?v=0.6.5">
+    <link rel="stylesheet" href="styles.css?v=0.6.6">
   </head>
   <body data-word-list-url="words.json" data-api-base="api" data-service-worker-url="sw.js">
     <main class="shell">
       <section id="menuView" class="view view-active">
         <div class="brand-block">
-          <p class="eyebrow">Daily word race</p>
+          <p class="eyebrow">Daily Word - Solo</p>
           <h1>Word Sprint</h1>
           <p class="menu-subtitle">A sharper daily word challenge.</p>
           <p class="lede">Play solo or start a two-player room where your opponent only sees your Wordle color trail and solve time.</p>
@@ -32,7 +32,7 @@
             </button>
           </div>
           <div id="scoreTip" class="score-tip hidden">
-            <p><strong>Scoring</strong> rewards faster solves and fewer attempts. Daily Sprint scores count once per name each day.</p>
+            <p><strong>Scoring</strong> rewards faster solves and fewer attempts. Daily Word - Solo scores count once per name each day.</p>
             <button id="dismissScoreTipBtn" class="text-button" type="button">Got it</button>
           </div>
           <div id="nameGate" class="menu-step">
@@ -47,24 +47,34 @@
           </div>
           <div id="mainMenuStep" class="menu-step hidden">
             <div class="menu-actions">
-              <button id="soloBtn" class="button-green">Daily Challenge</button>
-              <button id="duelMenuBtn" class="button-blue">2 Player Duel</button>
+              <button id="soloBtn" class="button-green">Daily Word - Solo</button>
+              <button id="duelMenuBtn" class="button-blue">2 Player Games</button>
               <button id="leaderboardBtn" class="button-mustard">Leaderboard</button>
             </div>
           </div>
           <div id="duelMenuStep" class="menu-step hidden">
+            <section class="menu-room-section" aria-labelledby="createRoomHeading">
+              <h3 id="createRoomHeading">Create Room</h3>
+              <div class="menu-actions">
+                <button id="createRoomBtn" class="button-green">Create Daily Word - Duel</button>
+                <button id="createTugRoomBtn" class="button-mustard">Create Word Tug</button>
+                <button id="createRaceRoomBtn" class="button-blue">Create Point Race</button>
+              </div>
+            </section>
+            <section class="menu-room-section" aria-labelledby="joinRoomHeading">
+              <h3 id="joinRoomHeading">Join Existing Room</h3>
+              <div class="menu-actions">
+                <button id="joinRoomBtn" class="button-blue">Join Room</button>
+              </div>
+              <label id="roomJoinField" class="hidden">
+                Room code
+                <input id="roomCodeInput" maxlength="6" placeholder="ABC123">
+              </label>
+              <button id="submitJoinRoomBtn" class="button-blue join-submit hidden" type="button">Join</button>
+            </section>
             <div class="menu-actions">
-              <button id="createRoomBtn" class="button-green">Create Sprint Duel</button>
-              <button id="createTugRoomBtn" class="button-mustard">Create Word Tug</button>
-              <button id="createRaceRoomBtn" class="button-blue">Create Word Race</button>
-              <button id="joinRoomBtn" class="button-blue">Join Room</button>
               <button id="duelBackBtn" class="text-button">Back</button>
             </div>
-            <label id="roomJoinField" class="hidden">
-              Room code
-              <input id="roomCodeInput" maxlength="6" placeholder="ABC123">
-            </label>
-            <button id="submitJoinRoomBtn" class="button-blue join-submit hidden" type="button">Join</button>
           </div>
           <div id="menuStatus" class="menu-status" aria-live="polite"></div>
         </div>
@@ -76,7 +86,7 @@
           <div>
             <p id="modeLabel" class="eyebrow">Daily</p>
             <div class="title-line">
-              <h2 id="gameTitle">Sprint Duel</h2>
+              <h2 id="gameTitle">Daily Word - Duel</h2>
               <div id="roomBadge" class="room-badge hidden">
                 <span id="roomCodeDisplay"></span>
                 <button id="copyRoomBtn" type="button">Copy</button>
@@ -122,7 +132,7 @@
               <strong>You</strong>
               <span id="youRaceScore">0/5</span>
             </div>
-            <div class="race-track" aria-label="Your Word Race meter">
+            <div class="race-track" aria-label="Your Point Race meter">
               <span id="youRaceCar" class="race-car"><span class="race-car-icon">🏎️</span></span>
               <span class="race-finish" aria-hidden="true">🏁</span>
             </div>
@@ -132,7 +142,7 @@
               <strong id="raceOpponentName">Opponent</strong>
               <span id="opponentRaceScore">0/5</span>
             </div>
-            <div class="race-track" aria-label="Opponent Word Race meter">
+            <div class="race-track" aria-label="Opponent Point Race meter">
               <span id="opponentRaceCar" class="race-car"><span class="race-car-icon">🏎️</span></span>
               <span class="race-finish" aria-hidden="true">🏁</span>
             </div>
@@ -176,6 +186,7 @@
           <button id="dailyTabBtn" class="leader-tab active" type="button" role="tab" aria-selected="true">Daily</button>
           <button id="duelTabBtn" class="leader-tab" type="button" role="tab" aria-selected="false">Duel</button>
           <button id="tugTabBtn" class="leader-tab" type="button" role="tab" aria-selected="false">Word Tug</button>
+          <button id="raceTabBtn" class="leader-tab" type="button" role="tab" aria-selected="false">Point Race</button>
         </div>
         <div id="leaderboardList" class="leaderboard"></div>
       </section>
@@ -197,8 +208,8 @@
       </div>
     </div>
     <div id="themeWave" class="theme-wave hidden" aria-hidden="true"></div>
-    <div class="version-badge" aria-label="App version">v0.6.5</div>
+    <div class="version-badge" aria-label="App version">v0.6.6</div>
 
-    <script src="app.js?v=0.6.5"></script>
+    <script src="app.js?v=0.6.6"></script>
   </body>
 </html>

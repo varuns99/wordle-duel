@@ -387,6 +387,35 @@ async function testRaceMatchWinner() {
   assert.equal(afterMatch.payload.error, "Match is already finished");
 }
 
+async function testRaceLeaderboardRecord() {
+  const { code, alphaId, betaId } = await createReadyRaceRoom();
+  const winners = [betaId, betaId, alphaId, alphaId, alphaId, alphaId, alphaId];
+
+  for (let round = 1; round <= winners.length; round += 1) {
+    const playerId = winners[round - 1];
+    const result = await post(`/rooms/${code}/${playerId}/guess`, {
+      guess: testRaceAnswer(round),
+      roundNumber: round
+    });
+    assert.equal(result.response.status, 200);
+  }
+
+  const leaderboard = await get("/leaderboard");
+  assert.equal(leaderboard.response.status, 200);
+  const winnerEntry = leaderboard.payload.entries.find((entry) => entry.gameId === `${code}:race:${alphaId}:win`);
+  const loserEntry = leaderboard.payload.entries.find((entry) => entry.gameId === `${code}:race:${betaId}:points`);
+  assert.ok(winnerEntry);
+  assert.ok(loserEntry);
+  assert.equal(winnerEntry.mode, "race");
+  assert.equal(winnerEntry.name, "Alpha");
+  assert.equal(winnerEntry.loserName, "Beta");
+  assert.equal(winnerEntry.points, 5);
+  assert.equal(loserEntry.mode, "race");
+  assert.equal(loserEntry.name, "Beta");
+  assert.equal(loserEntry.loserName, null);
+  assert.equal(loserEntry.points, 2);
+}
+
 async function testConcurrentStaleRoundGuard() {
   const { code, alphaId, betaId } = await createReadyTugRoom();
   const [alpha, beta] = await Promise.all([
@@ -496,6 +525,7 @@ async function run() {
     await testRaceHappyPath();
     await testRaceMissAwardsOpponent();
     await testRaceMatchWinner();
+    await testRaceLeaderboardRecord();
     await testConcurrentStaleRoundGuard();
     await testLegacyClientWithoutRoundNumber();
     await testLegacyConcurrentStaleRoundGuard();
