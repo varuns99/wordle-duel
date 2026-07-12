@@ -61,6 +61,12 @@ function useSupabaseLeaderboard() {
   return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
 }
 
+function logLeaderboardError(action, error) {
+  const code = error?.code ? ` code=${error.code}` : "";
+  const message = error?.message || String(error || "Unknown leaderboard error");
+  console.error(`[leaderboard:${action}]${code} ${message}`);
+}
+
 async function getSupabaseClient() {
   if (!useSupabaseLeaderboard()) return null;
   if (!supabaseClientPromise) {
@@ -176,9 +182,39 @@ function aggregateLeaderboard(entries) {
 }
 
 async function readLeaderboardEntries() {
+  const result = await readLeaderboardResult();
+  return result.entries;
+}
+
+async function readLeaderboardResult() {
   if (!useSupabaseLeaderboard()) {
-    return readLeaderboard().map((entry) => normalizeScore(entry, true));
+    return {
+      entries: readLocalLeaderboardEntries(),
+      fallback: true,
+      backend: "local-json"
+    };
   }
+  try {
+    return {
+      entries: await readSupabaseLeaderboardEntries(),
+      fallback: false,
+      backend: "supabase"
+    };
+  } catch (error) {
+    logLeaderboardError("read", error);
+    return {
+      entries: readLocalLeaderboardEntries(),
+      fallback: true,
+      backend: "local-json"
+    };
+  }
+}
+
+function readLocalLeaderboardEntries() {
+  return readLeaderboard().map((entry) => normalizeScore(entry, true));
+}
+
+async function readSupabaseLeaderboardEntries() {
   const supabase = await getSupabaseClient();
   const { data, error } = await supabase
     .from(LEADERBOARD_TABLE)
@@ -191,12 +227,20 @@ async function readLeaderboardEntries() {
 
 async function recordLeaderboardScore(score, preservePoints = false) {
   if (useSupabaseLeaderboard()) {
-    return recordSupabaseLeaderboardScore(score, preservePoints);
+    try {
+      return await recordSupabaseLeaderboardScore(score, preservePoints);
+    } catch (error) {
+      logLeaderboardError("write", error);
+    }
   }
-  const entries = readLeaderboard().map((entry) => normalizeScore(entry, true));
+  return recordLocalLeaderboardScore(score, preservePoints);
+}
+
+function recordLocalLeaderboardScore(score, preservePoints = false) {
+  const entries = readLocalLeaderboardEntries();
   const normalized = normalizeScore(score, preservePoints);
   if (normalized.gameId && entries.some((entry) => entry.gameId === normalized.gameId)) {
-    return { entries, players: aggregateLeaderboard(entries), saved: false };
+    return { entries, players: aggregateLeaderboard(entries), saved: false, fallback: useSupabaseLeaderboard() };
   }
   if (
     normalized.mode === "daily" &&
@@ -207,12 +251,12 @@ async function recordLeaderboardScore(score, preservePoints = false) {
       entry.name.trim().toLowerCase() === normalized.name.trim().toLowerCase()
     ))
   ) {
-    return { entries, players: aggregateLeaderboard(entries), saved: false };
+    return { entries, players: aggregateLeaderboard(entries), saved: false, fallback: useSupabaseLeaderboard() };
   }
   entries.push(normalized);
   entries.sort((a, b) => new Date(a.solvedAt) - new Date(b.solvedAt));
   writeLeaderboard(entries);
-  return { entries, players: aggregateLeaderboard(entries), saved: true };
+  return { entries, players: aggregateLeaderboard(entries), saved: true, fallback: useSupabaseLeaderboard() };
 }
 
 async function recordSupabaseLeaderboardScore(score, preservePoints = false) {
@@ -259,6 +303,43 @@ async function recordSupabaseLeaderboardScore(score, preservePoints = false) {
 
   const entries = await readLeaderboardEntries();
   return { entries, players: aggregateLeaderboard(entries), saved: true };
+}
+
+async function leaderboardHealth() {
+  if (!useSupabaseLeaderboard()) {
+    return {
+      configured: false,
+      ok: true,
+      backend: "local-json",
+      fallback: true
+    };
+  }
+  try {
+    const supabase = await getSupabaseClient();
+    const { error } = await supabase
+      .from(LEADERBOARD_TABLE)
+      .select("id")
+      .limit(1);
+    if (error) throw error;
+    return {
+      configured: true,
+      ok: true,
+      backend: "supabase",
+      fallback: false
+    };
+  } catch (error) {
+    logLeaderboardError("health", error);
+    return {
+      configured: true,
+      ok: false,
+      backend: "supabase",
+      fallback: true,
+      error: {
+        code: error?.code || null,
+        message: "Supabase leaderboard check failed"
+      }
+    };
+  }
 }
 
 function dailyChallengeKey(date = new Date()) {
@@ -679,9 +760,19 @@ async function handleApi(req, res) {
       return;
     }
 
+    if (req.method === "GET" && req.url === "/api/leaderboard/health") {
+      json(res, 200, await leaderboardHealth());
+      return;
+    }
+
     if (req.method === "GET" && req.url === "/api/leaderboard") {
-      const entries = await readLeaderboardEntries();
-      json(res, 200, { entries, players: aggregateLeaderboard(entries) });
+      const result = await readLeaderboardResult();
+      json(res, 200, {
+        entries: result.entries,
+        players: aggregateLeaderboard(result.entries),
+        fallback: result.fallback,
+        backend: result.backend
+      });
       return;
     }
 

@@ -42,8 +42,8 @@ function startServer() {
       PORT: String(PORT),
       HOST: "127.0.0.1",
       DATA_DIR: dataDir,
-      SUPABASE_URL: "",
-      SUPABASE_SERVICE_ROLE_KEY: "",
+      SUPABASE_URL: "not-a-valid-supabase-url",
+      SUPABASE_SERVICE_ROLE_KEY: "test-only-fake-key",
       TUG_COUNTDOWN_MS: "80",
       TUG_WORD_SEQUENCE: TUG_TEST_WORDS.join(","),
       RACE_WORD_SEQUENCE: RACE_TEST_WORDS.join(",")
@@ -104,6 +104,12 @@ async function testHealthEndpoint() {
   assert.equal(health.payload.ok, true);
   assert.equal(health.payload.rooms, true);
   assert.equal(typeof health.payload.serverNow, "number");
+
+  const leaderboardHealth = await get("/leaderboard/health");
+  assert.equal(leaderboardHealth.response.status, 200);
+  assert.equal(leaderboardHealth.payload.configured, true);
+  assert.equal(leaderboardHealth.payload.ok, false);
+  assert.equal(leaderboardHealth.payload.fallback, true);
 }
 
 async function createReadyTugRoom() {

@@ -1,10 +1,10 @@
-const CACHE_NAME = "word-sprint-public-v0.6.7";
+const CACHE_NAME = "word-sprint-public-v0.6.8";
 const APP_SHELL = [
   "./",
   "index.html",
   "manifest.webmanifest",
-  "app.js?v=0.6.7",
-  "styles.css?v=0.6.7",
+  "app.js?v=0.6.8",
+  "styles.css?v=0.6.8",
   "words.json",
   "icon-192.png",
   "icon-512.png",
