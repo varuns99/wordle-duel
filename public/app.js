@@ -1326,6 +1326,7 @@ async function submitJoinRoom() {
 }
 
 async function showLeaderboard() {
+  hideResultCard();
   showView("leaderboardView");
   const list = $("leaderboardList");
   list.textContent = "Loading...";
