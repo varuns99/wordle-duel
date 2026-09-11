@@ -1,15 +1,18 @@
-const CACHE_NAME = "tug-of-words-public-v0.7.1";
+const CACHE_NAME = "tug-of-words-public-v0.7.2";
 const APP_SHELL = [
   "./",
   "index.html",
   "manifest.webmanifest",
-  "app.js?v=0.7.1",
-  "styles.css?v=0.7.1",
+  "app.js?v=0.7.2",
+  "styles.css?v=0.7.2",
   "words.json",
   "icon-192.png",
   "icon-512.png",
   "icon-180.png",
-  "tug-of-words-wordmark.png"
+  "tug-of-words-wordmark.png",
+  "fonts/mclaren/McLaren-Regular.ttf",
+  "fonts/mclaren/OFL.txt",
+  "fonts/mclaren/METADATA.pb"
 ];
 
 self.addEventListener("install", (event) => {

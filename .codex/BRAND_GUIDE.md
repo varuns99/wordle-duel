@@ -111,7 +111,10 @@ Avoid purple/purple-blue gradients, beige-heavy palettes, and decorative color b
 
 ## Typography
 
-Use the existing system font stack:
+Use the bundled McLaren font for the main UI:
+`"McLaren", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
+
+Keep word board tiles and keyboard letter keys on the previous system tile stack:
 `Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
 
 Rules:
