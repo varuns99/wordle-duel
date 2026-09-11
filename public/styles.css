@@ -1258,12 +1258,12 @@ body.tug-result-open::before {
 
 @media (max-width: 780px) {
   .shell {
-    padding: 12px;
+    padding: 8px 12px;
   }
 
   #menuView.view-active {
     grid-template-columns: 1fr;
-    gap: 22px;
+    gap: 14px;
     align-content: center;
   }
 
@@ -1278,7 +1278,7 @@ body.tug-result-open::before {
   }
 
   .brand-wordmark {
-    width: min(520px, 94vw);
+    width: min(500px, 92vw);
   }
 
   .menu-subtitle {
@@ -1529,11 +1529,11 @@ body.tug-result-open::before {
 
 @media (max-width: 430px) {
   .shell {
-    padding: 8px 10px;
+    padding: 4px 10px;
   }
 
   #menuView {
-    min-height: calc(100vh - 28px);
+    min-height: calc(100svh - 8px);
   }
 
   .brand-block h1 {
@@ -1542,15 +1542,16 @@ body.tug-result-open::before {
   }
 
   .brand-wordmark {
-    width: min(350px, 94vw);
+    width: min(330px, 90vw);
   }
 
   .menu-subtitle {
-    margin-top: 10px;
+    margin-top: 6px;
     font-size: clamp(1.12rem, 6vw, 1.45rem);
   }
 
   .lede {
+    margin-top: 8px;
     font-size: 0.94rem;
   }
 
