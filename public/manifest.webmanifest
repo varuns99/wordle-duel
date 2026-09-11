@@ -1,7 +1,7 @@
 {
-  "name": "Word Sprint",
-  "short_name": "Word Sprint",
-  "description": "A daily word sprint with solo, Sprint Duel, and Word Tug modes.",
+  "name": "Tug of Words",
+  "short_name": "Tug of Words",
+  "description": "A fast social word game with solo and two-player modes.",
   "id": "/public/",
   "start_url": "/public/",
   "scope": "/public/",

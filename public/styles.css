@@ -170,6 +170,10 @@ button:disabled {
   display: grid;
 }
 
+.brand-block {
+  text-align: center;
+}
+
 .brand-block h1 {
   max-width: 760px;
   margin: 0;
@@ -180,9 +184,18 @@ button:disabled {
   animation: brandRise 520ms ease-out both;
 }
 
+.brand-wordmark {
+  width: min(680px, 100%);
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  animation: brandRise 520ms ease-out both;
+  filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.22));
+}
+
 .menu-subtitle {
   max-width: 520px;
-  margin: 12px 0 0;
+  margin: 12px auto 0;
   color: var(--gold);
   font-size: clamp(1.35rem, 7vw, 2.15rem);
   line-height: 1.08;
@@ -200,7 +213,7 @@ button:disabled {
 
 .lede {
   max-width: 590px;
-  margin-top: 14px;
+  margin: 14px auto 0;
   color: var(--muted);
   font-size: 1.1rem;
   line-height: 1.55;
@@ -220,6 +233,10 @@ button:disabled {
 
 @media (prefers-reduced-motion: reduce) {
   .brand-block h1 {
+    animation: none;
+  }
+
+  .brand-wordmark {
     animation: none;
   }
 
@@ -1260,6 +1277,10 @@ body.tug-result-open::before {
     line-height: 0.96;
   }
 
+  .brand-wordmark {
+    width: min(520px, 94vw);
+  }
+
   .menu-subtitle {
     font-size: clamp(1.2rem, 6.2vw, 1.75rem);
   }
@@ -1520,6 +1541,10 @@ body.tug-result-open::before {
     line-height: 0.9;
   }
 
+  .brand-wordmark {
+    width: min(350px, 94vw);
+  }
+
   .menu-subtitle {
     margin-top: 10px;
     font-size: clamp(1.12rem, 6vw, 1.45rem);
@@ -1544,6 +1569,10 @@ body.tug-result-open::before {
 
   #menuView.menu-join-active .brand-block h1 {
     font-size: clamp(3.2rem, 17vw, 4.2rem);
+  }
+
+  #menuView.menu-join-active .brand-wordmark {
+    width: min(310px, 86vw);
   }
 
   #menuView.menu-join-active .lede {

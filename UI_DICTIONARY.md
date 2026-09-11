@@ -1,12 +1,12 @@
-# Word Sprint UI Dictionary
+# Tug of Words UI Dictionary
 
 Use these terms when describing changes or bugs.
 
 ## Main Menu
 
-- **Main menu**: The first screen with the Word Sprint title and menu panel.
+- **Main menu**: The first screen with the Tug of Words wordmark and menu panel.
 - **Name gate**: First menu step where the player enters or skips their display name.
-- **Brand block**: Title area with "Word Sprint", subtitle, and description.
+- **Brand block**: Title area with the "Tug of Words" wordmark, subtitle, and description.
 - **Menu panel**: Right-side control panel with theme, player name, and menu buttons.
 - **Menu step**: One state inside the menu panel, such as name entry, main options, or duel options.
 - **Theme toggle**: Dark/light mode switch above the player name field.

@@ -694,7 +694,7 @@ function showResultCard({ won, answer, saved = true }) {
       : "Score already counted for this daily challenge."
     : `The word was ${answer.toUpperCase()}.`;
   state.lastResultText = [
-    "Word Sprint",
+    "Tug of Words",
     `${state.mode === "tug" ? "Word Tug" : state.mode === "race" ? "Point Race" : mode === "duel" ? "Daily Word - Duel" : "Daily Word - Solo"} ${won ? "solved" : "finished"}`,
     `${attempts}/6 attempts`,
     `${formatTime(state.elapsedMs)}`,
@@ -730,7 +730,7 @@ function showTugMatchResult(room) {
   $("resultStats").innerHTML = "";
   $("resultNote").textContent = summary;
   state.lastResultText = [
-    "Word Sprint",
+    "Tug of Words",
     `Word Tug ${youWon ? "win" : "loss"}`,
     `You ${youScore} - ${opponentScore} ${opponentName}`,
     summary
@@ -763,7 +763,7 @@ function showRaceMatchResult(room) {
   `;
   $("resultNote").textContent = "First to 5 points wins.";
   state.lastResultText = [
-    "Word Sprint",
+    "Tug of Words",
     `Point Race ${youWon ? "win" : "loss"}`,
     `You ${youScore} - ${opponentScore} ${opponentName}`,
     `${rounds} rounds`

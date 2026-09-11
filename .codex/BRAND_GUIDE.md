@@ -1,10 +1,10 @@
-# Word Sprint Brand Guide
+# Tug of Words Brand Guide
 
-This guide is for any AI agent or human contributor working on Word Sprint. Read it before changing UI, icons, buttons, copy, game visuals, animations, or interaction patterns.
+This guide is for any AI agent or human contributor working on Tug of Words. Read it before changing UI, icons, buttons, copy, game visuals, animations, or interaction patterns.
 
 ## Brand Position
 
-Word Sprint is a fast, social word-game app. It should feel sharp, competitive, compact, and a little celebratory, without becoming noisy or cartoonish.
+Tug of Words is a fast, social word-game app. It should feel sharp, competitive, compact, and a little celebratory, without becoming noisy or cartoonish.
 
 The app is not a marketing site. It is a playable tool first. New screens should get players into the game quickly, show state clearly, and avoid long explanatory text.
 
@@ -27,7 +27,7 @@ Avoid:
 ## Product Names And Modes
 
 Use these names consistently:
-- App: `Word Sprint`
+- App: `Tug of Words`
 - Solo mode: `Daily Challenge` in menu, `Daily Sprint` in results/leaderboard
 - Classic two-player mode: `Sprint Duel`
 - Tug mode: `Word Tug`
@@ -118,7 +118,7 @@ Rules:
 - Keep letter spacing at `0`.
 - Do not scale ordinary UI text with viewport width.
 - Use heavy weights for game UI and labels.
-- Reserve very large type for the main `Word Sprint` menu heading and major result moments.
+- Reserve very large type for the main `Tug of Words` menu wordmark and major result moments.
 - Keep panel headings compact.
 
 Text should never overlap or require guessing. If a string can be long, constrain it with ellipsis or wrap intentionally.

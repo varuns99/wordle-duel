@@ -1,14 +1,15 @@
-const CACHE_NAME = "word-sprint-public-v0.7.0";
+const CACHE_NAME = "tug-of-words-public-v0.7.1";
 const APP_SHELL = [
   "./",
   "index.html",
   "manifest.webmanifest",
-  "app.js?v=0.7.0",
-  "styles.css?v=0.7.0",
+  "app.js?v=0.7.1",
+  "styles.css?v=0.7.1",
   "words.json",
   "icon-192.png",
   "icon-512.png",
-  "icon-180.png"
+  "icon-180.png",
+  "tug-of-words-wordmark.png"
 ];
 
 self.addEventListener("install", (event) => {
