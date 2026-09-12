@@ -337,6 +337,17 @@ input {
   background: color-mix(in srgb, var(--panel-2) 72%, transparent);
 }
 
+.game-type-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.game-type-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
 .game-type-option strong {
   color: var(--text);
   font-size: 1rem;

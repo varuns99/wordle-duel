@@ -10,7 +10,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="public/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="public/icon-180.png">
-    <link rel="stylesheet" href="public/styles.css?v=0.7.6">
+    <link rel="stylesheet" href="public/styles.css?v=0.7.7">
   </head>
   <body data-word-list-url="public/words.json" data-api-base="api" data-service-worker-url="sw.js">
     <main class="shell">
@@ -67,16 +67,25 @@
             <div id="createGameTypeStep" class="duel-flow-step hidden">
               <div class="game-type-options" role="radiogroup" aria-label="Choose game type">
                 <button class="game-type-option" type="button" data-mode="duel" aria-pressed="false">
-                  <strong>Daily Word - Duel</strong>
-                  <span>Same daily word. Fastest solve wins the room.</span>
+                  <span class="game-type-head">
+                    <span class="game-type-icon" aria-hidden="true">⚡</span>
+                    <strong>Daily Word - Duel</strong>
+                  </span>
+                  <span>Same daily word. Fastest solve wins.</span>
                 </button>
                 <button class="game-type-option" type="button" data-mode="tug" aria-pressed="false">
-                  <strong>Word Tug</strong>
-                  <span>Win rounds to tug the score to your side first.</span>
+                  <span class="game-type-head">
+                    <span class="game-type-icon" aria-hidden="true">🪢</span>
+                    <strong>Word Tug</strong>
+                  </span>
+                  <span>Win rounds to pull the score to +3.</span>
                 </button>
                 <button class="game-type-option" type="button" data-mode="race" aria-pressed="false">
-                  <strong>Point Race</strong>
-                  <span>Score round points. First player to 5 wins.</span>
+                  <span class="game-type-head">
+                    <span class="game-type-icon" aria-hidden="true">🏎️</span>
+                    <strong>Point Race</strong>
+                  </span>
+                  <span>Win rounds to score points. First to 5 wins.</span>
                 </button>
               </div>
               <button id="createRoomBtn" class="button-green create-selected-room" type="button" disabled>Create Room</button>
@@ -218,8 +227,8 @@
       </div>
     </div>
     <div id="themeWave" class="theme-wave hidden" aria-hidden="true"></div>
-    <div class="version-badge" aria-label="App version">v0.7.6</div>
+    <div class="version-badge" aria-label="App version">v0.7.7</div>
 
-    <script src="public/app.js?v=0.7.6"></script>
+    <script src="public/app.js?v=0.7.7"></script>
   </body>
 </html>
