@@ -128,6 +128,13 @@ button:disabled {
   font-weight: 900;
 }
 
+body.light-theme .button-green,
+body.light-theme .button-blue,
+body.light-theme .button-mustard {
+  color: #fffdf7;
+  text-shadow: 0 1px 2px rgba(29, 33, 26, 0.28);
+}
+
 .join-submit {
   width: 100%;
   margin-top: 10px;
@@ -260,7 +267,14 @@ button:disabled {
   }
 }
 
-.menu-panel,
+.menu-panel {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .leaderboard {
   padding: 18px;
   border: 1px solid var(--line);
@@ -327,14 +341,10 @@ input {
 }
 
 .theme-control {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
-  color: var(--muted);
-  font-size: 0.88rem;
-  font-weight: 800;
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 20;
 }
 
 .score-tip {
@@ -362,38 +372,45 @@ input {
 }
 
 .theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  min-height: 36px;
-  padding: 0 10px;
-  border-radius: 999px;
-  font-size: 0.82rem;
-  font-weight: 900;
-}
-
-.toggle-track {
   position: relative;
-  display: inline-block;
-  width: 38px;
-  height: 20px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-color: color-mix(in srgb, var(--line) 72%, transparent);
   border-radius: 999px;
-  background: var(--key-used);
+  background: color-mix(in srgb, var(--panel-bg) 84%, transparent);
+  box-shadow: 0 12px 36px var(--shadow);
+  backdrop-filter: blur(8px);
 }
 
-.toggle-thumb {
+.theme-toggle:hover {
+  border-color: var(--gold);
+}
+
+.theme-icon {
   position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--text);
-  transition: transform 140ms ease;
+  color: var(--gold);
+  font-size: 1.25rem;
+  line-height: 1;
+  transition: opacity 140ms ease, transform 140ms ease;
 }
 
-body.light-theme .toggle-thumb {
-  transform: translateX(18px);
+.theme-icon-sun {
+  opacity: 0;
+  transform: scale(0.68) rotate(-24deg);
+}
+
+body.light-theme .theme-icon-moon {
+  opacity: 0;
+  transform: scale(0.68) rotate(24deg);
+}
+
+body.light-theme .theme-icon-sun {
+  opacity: 1;
+  transform: scale(1) rotate(0);
 }
 
 .menu-status {
@@ -1302,7 +1319,10 @@ body.tug-result-open::before {
     line-height: 1.45;
   }
 
-  .menu-panel,
+  .menu-panel {
+    padding: 0;
+  }
+
   .leaderboard {
     padding: 14px;
   }

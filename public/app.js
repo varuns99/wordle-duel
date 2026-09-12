@@ -57,7 +57,7 @@ function applyTheme(theme) {
   const isLight = theme === "light";
   document.body.classList.toggle("light-theme", isLight);
   $("themeToggle")?.setAttribute("aria-pressed", String(isLight));
-  if ($("themeLabel")) $("themeLabel").textContent = isLight ? "Light" : "Dark";
+  $("themeToggle")?.setAttribute("aria-label", isLight ? "Switch to dark mode" : "Switch to light mode");
 }
 
 function animateThemeChange(nextTheme) {
