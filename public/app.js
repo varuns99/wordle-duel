@@ -886,6 +886,8 @@ function resetGame({ mode, answer, room }) {
   });
 
   const isRoom = mode === "duel" || mode === "tug" || mode === "race";
+  document.body.classList.remove("mode-solo", "mode-duel", "mode-tug", "mode-race");
+  document.body.classList.add(`mode-${mode === "solo" ? "solo" : roomMode(mode)}`);
   $("modeLabel").textContent = isRoom ? "Room" : "Daily";
   $("gameTitle").textContent = mode === "tug" ? "Word Tug" : mode === "race" ? "Point Race" : mode === "duel" ? "Daily Word - Duel" : "Daily Word - Solo";
   $("roomBadge").classList.toggle("hidden", !isRoom);

@@ -1191,7 +1191,7 @@ body.tug-result-open::before {
   display: grid;
   gap: 6px;
   width: min(680px, calc(100vw - 32px));
-  margin-top: 0;
+  margin-top: 14px;
 }
 
 .key-row {
@@ -1522,6 +1522,7 @@ body.tug-result-open::before {
   .board-wrap {
     gap: 6px;
     padding-top: 0;
+    padding-bottom: 182px;
   }
 
   .message {
@@ -1535,6 +1536,14 @@ body.tug-result-open::before {
     min-width: 0;
   }
 
+  body.mode-solo .board-wrap {
+    padding-top: clamp(10px, 2dvh, 22px);
+  }
+
+  body.mode-solo .board {
+    width: min(calc(100vw - 42px), max(300px, calc((100dvh - 286px) * 0.88)), 370px);
+  }
+
   .row {
     gap: 5px;
   }
@@ -1546,12 +1555,16 @@ body.tug-result-open::before {
   }
 
   .keyboard {
-    position: sticky;
-    bottom: 8px;
-    width: min(100%, 560px);
+    position: fixed;
+    left: 50%;
+    bottom: max(40px, calc(env(safe-area-inset-bottom) + 22px));
+    z-index: 20;
+    width: min(calc(100vw - 20px), 560px);
     gap: 6px;
-    padding: 6px 0;
-    background: linear-gradient(180deg, transparent, var(--bg) 12%);
+    margin-top: 0;
+    padding: 8px 0;
+    background: transparent;
+    transform: translateX(-50%);
   }
 
   .key-row {
@@ -1788,6 +1801,14 @@ body.tug-result-open::before {
     width: min(calc(100vw - 84px), 292px);
   }
 
+  body.mode-solo .board-wrap {
+    padding-top: 6px;
+  }
+
+  body.mode-solo .board {
+    width: min(calc(100vw - 46px), 330px);
+  }
+
   .row {
     gap: 4px;
   }
@@ -1870,9 +1891,18 @@ body.tug-result-open::before {
 
   .board-wrap {
     gap: 5px;
+    padding-bottom: 160px;
+  }
+
+  .keyboard {
+    bottom: max(34px, calc(env(safe-area-inset-bottom) + 18px));
   }
 
   .board {
     width: min(calc(100vw - 92px), calc((100vh - 330px) * 0.82), 280px);
+  }
+
+  body.mode-solo .board {
+    width: min(calc(100vw - 64px), calc((100vh - 314px) * 0.86), 310px);
   }
 }

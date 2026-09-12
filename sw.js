@@ -1,10 +1,10 @@
-const CACHE_NAME = "tug-of-words-v0.7.4";
+const CACHE_NAME = "tug-of-words-v0.7.5";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/public/app.js?v=0.7.4",
-  "/public/styles.css?v=0.7.4",
+  "/public/app.js?v=0.7.5",
+  "/public/styles.css?v=0.7.5",
   "/public/words.json",
   "/public/icon-192.png",
   "/public/icon-512.png",
