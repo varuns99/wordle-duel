@@ -1203,7 +1203,7 @@ body.tug-result-open::before {
 .key {
   min-width: 0;
   width: 9%;
-  height: 48px;
+  height: 62px;
   padding: 0;
   background: var(--key-unused);
   border-color: var(--key-unused);
@@ -1522,7 +1522,7 @@ body.tug-result-open::before {
   .board-wrap {
     gap: 6px;
     padding-top: 0;
-    padding-bottom: 182px;
+    padding-bottom: 222px;
   }
 
   .message {
@@ -1573,7 +1573,7 @@ body.tug-result-open::before {
 
   .key {
     width: 9.2%;
-    height: 44px;
+    height: 57px;
     border-radius: 6px;
     font-size: 0.74rem;
   }
@@ -1891,7 +1891,7 @@ body.tug-result-open::before {
 
   .board-wrap {
     gap: 5px;
-    padding-bottom: 160px;
+    padding-bottom: 200px;
   }
 
   .keyboard {
