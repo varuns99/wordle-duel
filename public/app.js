@@ -30,7 +30,8 @@ const state = {
   lastSeenRoundResult: null,
   leaderboardEntries: [],
   activeLeaderboardMode: "daily",
-  lastResultText: ""
+  lastResultText: "",
+  pendingRoomMode: ""
 };
 
 const rank = { absent: 1, present: 2, correct: 3 };
@@ -128,8 +129,7 @@ function showMenuStep(stepId) {
     $(id).classList.toggle("hidden", id !== stepId);
   }
   if (stepId !== "duelMenuStep") {
-    $("roomJoinField").classList.add("hidden");
-    $("submitJoinRoomBtn").classList.add("hidden");
+    resetDuelMenuFlow();
   }
   $("menuView").classList.remove("menu-join-active");
 }
@@ -159,9 +159,63 @@ function continueWithName() {
 
 function showDuelMenu() {
   showMenuStep("duelMenuStep");
+  resetDuelMenuFlow();
   $("menuStatus").textContent = state.backendAvailable
-    ? "Create a room or join with a code."
+    ? "Create a new room or join an existing one."
     : "Two-player rooms need the Node backend or another realtime host.";
+}
+
+function showDuelRoomChoices() {
+  resetDuelMenuFlow();
+  $("menuStatus").textContent = state.backendAvailable
+    ? "Create a new room or join an existing one."
+    : "Two-player rooms need the Node backend or another realtime host.";
+}
+
+function resetDuelMenuFlow() {
+  state.pendingRoomMode = "";
+  $("duelRoomChoiceStep")?.classList.remove("hidden");
+  $("joinRoomStep")?.classList.add("hidden");
+  $("createGameTypeStep")?.classList.add("hidden");
+  $("duelMenuBackActions")?.classList.remove("hidden");
+  $("roomJoinField")?.classList.add("hidden");
+  $("submitJoinRoomBtn")?.classList.add("hidden");
+  if ($("createRoomBtn")) $("createRoomBtn").disabled = true;
+  for (const option of document.querySelectorAll(".game-type-option")) {
+    option.classList.remove("selected");
+    option.setAttribute("aria-pressed", "false");
+  }
+}
+
+function showCreateRoomOptions() {
+  if (!state.backendAvailable) {
+    $("menuStatus").textContent = "Two-player rooms need the Node backend or another realtime host.";
+    return;
+  }
+  state.pendingRoomMode = "";
+  $("duelRoomChoiceStep").classList.add("hidden");
+  $("joinRoomStep").classList.add("hidden");
+  $("createGameTypeStep").classList.remove("hidden");
+  $("duelMenuBackActions").classList.add("hidden");
+  $("roomJoinField").classList.add("hidden");
+  $("submitJoinRoomBtn").classList.add("hidden");
+  $("createRoomBtn").disabled = true;
+  for (const option of document.querySelectorAll(".game-type-option")) {
+    option.classList.remove("selected");
+    option.setAttribute("aria-pressed", "false");
+  }
+  $("menuStatus").textContent = "Choose a game type, then create the room.";
+}
+
+function selectCreateRoomMode(mode) {
+  state.pendingRoomMode = roomMode(mode);
+  for (const option of document.querySelectorAll(".game-type-option")) {
+    const selected = option.dataset.mode === state.pendingRoomMode;
+    option.classList.toggle("selected", selected);
+    option.setAttribute("aria-pressed", String(selected));
+  }
+  $("createRoomBtn").disabled = !state.backendAvailable || !state.pendingRoomMode;
+  $("menuStatus").textContent = "";
 }
 
 function formatTime(ms) {
@@ -1284,6 +1338,10 @@ function showJoinRoomForm() {
     return;
   }
   $("menuView").classList.add("menu-join-active");
+  $("duelRoomChoiceStep").classList.add("hidden");
+  $("createGameTypeStep").classList.add("hidden");
+  $("joinRoomStep").classList.remove("hidden");
+  $("duelMenuBackActions").classList.add("hidden");
   $("roomJoinField").classList.remove("hidden");
   $("submitJoinRoomBtn").classList.remove("hidden");
   $("menuStatus").textContent = "Enter a room code, then press Join.";
@@ -1579,10 +1637,20 @@ $("duelBackBtn").addEventListener("click", () => {
     ? `${WORDS.answers.length.toLocaleString()} answer words loaded.`
     : "";
 });
-$("createRoomBtn").addEventListener("click", () => createRoom("duel"));
-$("createTugRoomBtn").addEventListener("click", () => createRoom("tug"));
-$("createRaceRoomBtn").addEventListener("click", () => createRoom("race"));
+$("showCreateRoomBtn").addEventListener("click", showCreateRoomOptions);
+$("createRoomBtn").addEventListener("click", () => {
+  if (!state.pendingRoomMode) {
+    $("menuStatus").textContent = "Choose a game type first.";
+    return;
+  }
+  createRoom(state.pendingRoomMode);
+});
+$("createFlowBackBtn").addEventListener("click", showDuelRoomChoices);
 $("joinRoomBtn").addEventListener("click", showJoinRoomForm);
+$("joinFlowBackBtn").addEventListener("click", showDuelRoomChoices);
+for (const option of document.querySelectorAll(".game-type-option")) {
+  option.addEventListener("click", () => selectCreateRoomMode(option.dataset.mode));
+}
 $("submitJoinRoomBtn").addEventListener("click", submitJoinRoom);
 $("roomCodeInput").addEventListener("keydown", (event) => {
   if (event.key === "Enter") submitJoinRoom();
@@ -1655,14 +1723,12 @@ async function checkBackend() {
   } catch {
     state.backendAvailable = false;
   }
-  $("createRoomBtn").disabled = !state.backendAvailable;
-  $("createTugRoomBtn").disabled = !state.backendAvailable;
-  $("createRaceRoomBtn").disabled = !state.backendAvailable;
+  $("showCreateRoomBtn").disabled = !state.backendAvailable;
+  $("createRoomBtn").disabled = !state.backendAvailable || !state.pendingRoomMode;
   $("joinRoomBtn").disabled = !state.backendAvailable;
   $("submitJoinRoomBtn").disabled = !state.backendAvailable;
+  $("showCreateRoomBtn").title = state.backendAvailable ? "" : "Requires the Node backend or a realtime hosting service.";
   $("createRoomBtn").title = state.backendAvailable ? "" : "Requires the Node backend or a realtime hosting service.";
-  $("createTugRoomBtn").title = state.backendAvailable ? "" : "Requires the Node backend or a realtime hosting service.";
-  $("createRaceRoomBtn").title = state.backendAvailable ? "" : "Requires the Node backend or a realtime hosting service.";
   $("joinRoomBtn").title = state.backendAvailable ? "" : "Requires the Node backend or a realtime hosting service.";
   if (!state.backendAvailable && WORDS.answers.length) {
     $("menuStatus").textContent = `${WORDS.answers.length.toLocaleString()} answer words loaded. Daily Word - Solo is ready.`;
@@ -1670,9 +1736,8 @@ async function checkBackend() {
 }
 
 $("soloBtn").disabled = true;
+$("showCreateRoomBtn").disabled = true;
 $("createRoomBtn").disabled = true;
-$("createTugRoomBtn").disabled = true;
-$("createRaceRoomBtn").disabled = true;
 $("joinRoomBtn").disabled = true;
 $("submitJoinRoomBtn").disabled = true;
 initTheme();

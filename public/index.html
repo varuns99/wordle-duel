@@ -10,7 +10,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-180.png">
-    <link rel="stylesheet" href="styles.css?v=0.7.3">
+    <link rel="stylesheet" href="styles.css?v=0.7.4">
   </head>
   <body data-word-list-url="words.json" data-api-base="api" data-service-worker-url="sw.js">
     <main class="shell">
@@ -50,26 +50,39 @@
             </div>
           </div>
           <div id="duelMenuStep" class="menu-step hidden">
-            <section class="menu-room-section" aria-labelledby="createRoomHeading">
-              <h3 id="createRoomHeading">Create Room</h3>
+            <div id="duelRoomChoiceStep" class="duel-flow-step">
               <div class="menu-actions">
-                <button id="createRoomBtn" class="button-green">Create Daily Word - Duel</button>
-                <button id="createTugRoomBtn" class="button-mustard">Create Word Tug</button>
-                <button id="createRaceRoomBtn" class="button-blue">Create Point Race</button>
-              </div>
-            </section>
-            <section class="menu-room-section" aria-labelledby="joinRoomHeading">
-              <h3 id="joinRoomHeading">Join Existing Room</h3>
-              <div class="menu-actions">
+                <button id="showCreateRoomBtn" class="button-green">Create New Room</button>
                 <button id="joinRoomBtn" class="button-blue">Join Room</button>
               </div>
+            </div>
+            <div id="joinRoomStep" class="duel-flow-step hidden">
               <label id="roomJoinField" class="hidden">
                 Room code
                 <input id="roomCodeInput" maxlength="6" placeholder="ABC123">
               </label>
               <button id="submitJoinRoomBtn" class="button-blue join-submit hidden" type="button">Join</button>
-            </section>
-            <div class="menu-actions">
+              <button id="joinFlowBackBtn" class="text-button" type="button">Back</button>
+            </div>
+            <div id="createGameTypeStep" class="duel-flow-step hidden">
+              <div class="game-type-options" role="radiogroup" aria-label="Choose game type">
+                <button class="game-type-option" type="button" data-mode="duel" aria-pressed="false">
+                  <strong>Daily Word - Duel</strong>
+                  <span>Same daily word. Fastest solve wins the room.</span>
+                </button>
+                <button class="game-type-option" type="button" data-mode="tug" aria-pressed="false">
+                  <strong>Word Tug</strong>
+                  <span>Win rounds to tug the score to your side first.</span>
+                </button>
+                <button class="game-type-option" type="button" data-mode="race" aria-pressed="false">
+                  <strong>Point Race</strong>
+                  <span>Score round points. First player to 5 wins.</span>
+                </button>
+              </div>
+              <button id="createRoomBtn" class="button-green create-selected-room" type="button" disabled>Create Room</button>
+              <button id="createFlowBackBtn" class="text-button" type="button">Back</button>
+            </div>
+            <div id="duelMenuBackActions" class="menu-actions">
               <button id="duelBackBtn" class="text-button">Back</button>
             </div>
           </div>
@@ -205,8 +218,8 @@
       </div>
     </div>
     <div id="themeWave" class="theme-wave hidden" aria-hidden="true"></div>
-    <div class="version-badge" aria-label="App version">v0.7.3</div>
+    <div class="version-badge" aria-label="App version">v0.7.4</div>
 
-    <script src="app.js?v=0.7.3"></script>
+    <script src="app.js?v=0.7.4"></script>
   </body>
 </html>

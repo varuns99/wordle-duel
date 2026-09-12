@@ -312,28 +312,51 @@ input {
   margin: 16px 0 0;
 }
 
-.menu-room-section {
+.duel-flow-step {
+  display: grid;
+  gap: 12px;
+}
+
+.duel-flow-step.hidden {
+  display: none !important;
+}
+
+.game-type-options {
   display: grid;
   gap: 10px;
-  padding: 12px 0;
-  border-top: 1px solid var(--line);
 }
 
-.menu-room-section:first-child {
-  padding-top: 0;
-  border-top: 0;
+.game-type-option {
+  min-height: 76px;
+  display: grid;
+  gap: 5px;
+  justify-items: start;
+  padding: 12px;
+  text-align: left;
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--panel-2) 72%, transparent);
 }
 
-.menu-room-section h3 {
-  margin: 0;
-  color: var(--gold);
+.game-type-option strong {
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
+.game-type-option span {
+  color: var(--muted);
   font-size: 0.82rem;
-  font-weight: 950;
-  text-transform: uppercase;
+  line-height: 1.25;
 }
 
-.menu-room-section .menu-actions {
-  margin-top: 0;
+.game-type-option.selected {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 18%, var(--panel-2));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--gold) 60%, transparent);
+}
+
+.create-selected-room {
+  width: 100%;
 }
 
 .menu-step {
