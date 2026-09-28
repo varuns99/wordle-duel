@@ -10,6 +10,21 @@ const TUG_TEST_WORDS = ["knack", "snoop", "buggy", "vogue", "crane", "slate"];
 const RACE_TEST_WORDS = ["crane", "slate", "vogue", "buggy", "knack", "snoop"];
 const WORD_DATA = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "public", "words.json"), "utf8"));
 
+function testWordLists() {
+  const answers = new Set(WORD_DATA.answers);
+  const validGuesses = new Set(WORD_DATA.validGuesses);
+
+  assert.equal(WORD_DATA.answers.length, 2309);
+  assert.equal(WORD_DATA.validGuesses.length, 12947);
+  assert.equal(answers.size, WORD_DATA.answers.length);
+  assert.equal(validGuesses.size, WORD_DATA.validGuesses.length);
+  assert.ok(WORD_DATA.answers.every((word) => /^[a-z]{5}$/.test(word)));
+  assert.ok(WORD_DATA.validGuesses.every((word) => /^[a-z]{5}$/.test(word)));
+  assert.ok(WORD_DATA.answers.every((word) => validGuesses.has(word)));
+  assert.ok(validGuesses.has("aahed"));
+  assert.ok(!answers.has("aahed"));
+}
+
 function testTugAnswer(roundNumber) {
   return TUG_TEST_WORDS[(Math.max(1, roundNumber) - 1) % TUG_TEST_WORDS.length];
 }
@@ -308,6 +323,33 @@ async function testHappyPath() {
   assert.equal(betaScores.payload.room.scores[betaId], 0);
 }
 
+async function testAcceptedGuessOnlyWord() {
+  const { code, alphaId } = await createReadyTugRoom();
+  const guessOnlyWord = "aahed";
+
+  assert.ok(WORD_DATA.validGuesses.includes(guessOnlyWord));
+  assert.ok(!WORD_DATA.answers.includes(guessOnlyWord));
+
+  const accepted = await post(`/rooms/${code}/${alphaId}/guess`, {
+    guess: guessOnlyWord,
+    roundNumber: 1
+  });
+  assert.equal(accepted.response.status, 200);
+  assert.equal(accepted.payload.won, false);
+  assert.equal(accepted.payload.finished, false);
+  assert.equal(accepted.payload.attempts, 1);
+  assert.equal(accepted.payload.answer, null);
+  assert.equal(accepted.payload.room.roundNumber, 1);
+  assert.equal(accepted.payload.room.you.progress.length, 1);
+
+  const rejected = await post(`/rooms/${code}/${alphaId}/guess`, {
+    guess: "zzzzz",
+    roundNumber: 1
+  });
+  assert.equal(rejected.response.status, 400);
+  assert.equal(rejected.payload.error, "Not in this word list");
+}
+
 async function testRaceHappyPath() {
   const { code, alphaId, betaId } = await createReadyRaceRoom();
   const active = await get(`/rooms/${code}/${alphaId}`);
@@ -521,6 +563,7 @@ async function testTugLeaderboardRecord() {
 }
 
 async function run() {
+  testWordLists();
   const server = startServer();
   try {
     await server.ready();
@@ -528,6 +571,7 @@ async function run() {
     await testHealthEndpoint();
     await testSprintDuelReadyCountdown();
     await testHappyPath();
+    await testAcceptedGuessOnlyWord();
     await testRaceHappyPath();
     await testRaceMissAwardsOpponent();
     await testRaceMatchWinner();
