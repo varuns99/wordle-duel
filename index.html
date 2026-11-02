@@ -10,12 +10,15 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="public/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="public/icon-180.png">
-    <link rel="stylesheet" href="public/styles.css?v=0.7.8">
+    <link rel="stylesheet" href="public/styles.css?v=0.7.10">
   </head>
   <body data-word-list-url="public/words.json" data-api-base="api" data-service-worker-url="sw.js">
     <main class="shell">
       <section id="menuView" class="view view-active">
         <div class="theme-control">
+          <button id="contrastToggle" class="theme-toggle contrast-toggle" type="button" aria-label="High contrast colors" aria-pressed="false" title="High contrast colors">
+            <span class="theme-icon" aria-hidden="true">◐</span>
+          </button>
           <button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch to light mode" aria-pressed="false">
             <span class="theme-icon theme-icon-moon" aria-hidden="true">☾</span>
             <span class="theme-icon theme-icon-sun" aria-hidden="true">☀</span>
@@ -178,18 +181,23 @@
             <button id="duelReadyBtn" class="tug-ready-btn button-green" type="button">Ready</button>
           </section>
           <div id="message" class="message">Guess the 5-letter word.</div>
-          <div id="board" class="board" aria-label="Wordle board"></div>
-          <div id="resultCard" class="result-card hidden" aria-live="polite">
-            <p id="resultKicker" class="eyebrow">Result</p>
-            <h3 id="resultTitle">Solved</h3>
-            <div id="resultStats" class="result-stats"></div>
-            <p id="resultNote" class="result-note"></p>
-            <div class="result-actions">
-              <button id="shareResultBtn" class="button-blue" type="button">Share</button>
-              <button id="resultLeaderboardBtn" class="button-mustard" type="button">Leaderboard</button>
-            </div>
+          <div class="board-area">
+            <div id="board" class="board" aria-label="Wordle board"></div>
           </div>
-          <div id="keyboard" class="keyboard"></div>
+          <div class="dock">
+            <div id="resultCard" class="result-card hidden" aria-live="polite">
+              <p id="resultKicker" class="eyebrow">Result</p>
+              <h3 id="resultTitle">Solved</h3>
+              <div id="resultStats" class="result-stats"></div>
+              <p id="resultNote" class="result-note"></p>
+              <div class="result-actions">
+                <button id="shareResultBtn" class="button-blue" type="button">Share</button>
+                <button id="resultLeaderboardBtn" class="button-mustard" type="button">Leaderboard</button>
+              </div>
+              <button id="resultMenuBtn" class="text-button result-menu-btn" type="button">Back to menu</button>
+            </div>
+            <div id="keyboard" class="keyboard"></div>
+          </div>
         </section>
       </section>
 
@@ -227,8 +235,8 @@
       </div>
     </div>
     <div id="themeWave" class="theme-wave hidden" aria-hidden="true"></div>
-    <div class="version-badge" aria-label="App version">v0.7.8</div>
+    <div class="version-badge" aria-label="App version">v0.7.10</div>
 
-    <script src="public/app.js?v=0.7.8"></script>
+    <script src="public/app.js?v=0.7.10"></script>
   </body>
 </html>

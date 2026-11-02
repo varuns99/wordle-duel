@@ -31,7 +31,8 @@ const state = {
   leaderboardEntries: [],
   activeLeaderboardMode: "daily",
   lastResultText: "",
-  pendingRoomMode: ""
+  pendingRoomMode: "",
+  updatePending: false
 };
 
 const rank = { absent: 1, present: 2, correct: 3 };
@@ -46,6 +47,7 @@ const DAILY_CHALLENGE_OVERRIDES = {
   "2026-06-03": 2048
 };
 const THEME_STORAGE_KEY = "wordleDuelTheme";
+const CONTRAST_STORAGE_KEY = "wordleDuelHighContrast";
 const PLAYER_NAME_STORAGE_KEY = "wordleDuelPlayerName";
 const LOCAL_SCORE_STORAGE_KEY = "wordleDuelScores";
 const SCORE_TIP_STORAGE_KEY = "wordleSprintScoreTipSeen";
@@ -90,11 +92,33 @@ function initTheme() {
   });
 }
 
+function initContrast() {
+  const apply = (on) => {
+    document.body.classList.toggle("high-contrast", on);
+    $("contrastToggle")?.setAttribute("aria-pressed", String(on));
+  };
+  apply(localStorage.getItem(CONTRAST_STORAGE_KEY) === "true");
+  $("contrastToggle")?.addEventListener("click", () => {
+    const next = !document.body.classList.contains("high-contrast");
+    localStorage.setItem(CONTRAST_STORAGE_KEY, String(next));
+    apply(next);
+  });
+}
+
 function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
+  let hadController = Boolean(navigator.serviceWorker.controller);
   let refreshing = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadController) {
+      hadController = true;
+      return;
+    }
     if (refreshing) return;
+    if (isGameInProgress()) {
+      state.updatePending = true;
+      return;
+    }
     refreshing = true;
     window.location.reload();
   });
@@ -118,6 +142,17 @@ function showView(id) {
   for (const view of document.querySelectorAll(".view")) {
     view.classList.toggle("view-active", view.id === id);
   }
+  document.body.classList.toggle("in-game", id === "gameView");
+  if (id === "menuView" && state.updatePending && !isGameInProgress()) {
+    window.location.reload();
+  }
+}
+
+function isGameInProgress() {
+  if (!$("gameView").classList.contains("view-active")) return false;
+  if (state.mode === "tug" || state.mode === "race") return !state.room?.matchWinnerId;
+  if (state.mode === "duel") return !state.finished;
+  return !state.finished && (state.row > 0 || state.col > 0);
 }
 
 function playerName() {
@@ -131,7 +166,7 @@ function showMenuStep(stepId) {
   if (stepId !== "duelMenuStep") {
     resetDuelMenuFlow();
   }
-  $("menuView").classList.remove("menu-join-active");
+  $("menuView").classList.remove("menu-compact");
 }
 
 function enterMainMenu(name) {
@@ -174,6 +209,7 @@ function showDuelRoomChoices() {
 
 function resetDuelMenuFlow() {
   state.pendingRoomMode = "";
+  $("menuView").classList.remove("menu-compact");
   $("duelRoomChoiceStep")?.classList.remove("hidden");
   $("joinRoomStep")?.classList.add("hidden");
   $("createGameTypeStep")?.classList.add("hidden");
@@ -193,6 +229,7 @@ function showCreateRoomOptions() {
     return;
   }
   state.pendingRoomMode = "";
+  $("menuView").classList.add("menu-compact");
   $("duelRoomChoiceStep").classList.add("hidden");
   $("joinRoomStep").classList.add("hidden");
   $("createGameTypeStep").classList.remove("hidden");
@@ -717,7 +754,7 @@ function hideResultCard() {
   $("resultCard").classList.remove("result-overlay");
   $("resultCard").classList.remove("tug-match-result");
   $("resultCard").classList.remove("race-match-result");
-  document.body.classList.remove("tug-result-open");
+  document.body.classList.remove("tug-result-open", "result-open");
   $("resultStats").innerHTML = "";
   $("resultNote").textContent = "";
   $("shareResultBtn").textContent = "Share";
@@ -755,6 +792,7 @@ function showResultCard({ won, answer, saved = true }) {
     `${points.toLocaleString()} points`
   ].join("\n");
   $("resultCard").classList.remove("hidden");
+  document.body.classList.add("result-open");
 }
 
 function showTugMatchResult(room) {
@@ -780,7 +818,7 @@ function showTugMatchResult(room) {
   const winnerName = youWon ? "You" : opponentName;
   const resultEmoji = youWon ? "🥳" : "🤕";
   $("resultKicker").textContent = "Word Tug - Time Challenge";
-  $("resultTitle").innerHTML = `${resultEmoji} <span class="tug-result-winner">${escapeHtml(winnerName)}</span> won the tug`;
+  $("resultTitle").innerHTML = `<span class="result-emoji" aria-hidden="true">${resultEmoji}</span><span class="result-headline"><span class="tug-result-winner">${escapeHtml(winnerName)}</span> won the tug</span>`;
   $("resultStats").innerHTML = "";
   $("resultNote").textContent = summary;
   state.lastResultText = [
@@ -809,7 +847,7 @@ function showRaceMatchResult(room) {
   const resultEmoji = youWon ? "🥳" : "🤕";
   const rounds = room.history?.length || room.roundNumber || 1;
   $("resultKicker").textContent = "Point Race";
-  $("resultTitle").innerHTML = `${resultEmoji} <span class="race-result-winner">${escapeHtml(winnerName)}</span> won the race`;
+  $("resultTitle").innerHTML = `<span class="result-emoji" aria-hidden="true">${resultEmoji}</span><span class="result-headline"><span class="race-result-winner">${escapeHtml(winnerName)}</span> won the race</span>`;
   $("resultStats").innerHTML = `
     <span><strong>${youScore}</strong>You</span>
     <span><strong>${rounds}</strong>rounds</span>
@@ -1021,7 +1059,16 @@ function keyButton(label, extra = "") {
   const button = document.createElement("button");
   button.className = `key ${extra}`;
   button.textContent = label;
-  button.addEventListener("click", () => handleKey(label));
+  button.dataset.key = label;
+  button.setAttribute("aria-label", label === "⌫" ? "Backspace" : label);
+  button.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    handleKey(label);
+  });
+  button.addEventListener("click", (event) => {
+    if (event.detail === 0) handleKey(label);
+  });
   button.disabled = state.submittingGuess;
   const className = state.keyRanks[label.toLowerCase()];
   if (className) button.classList.add(className);
@@ -1339,7 +1386,7 @@ function showJoinRoomForm() {
     $("menuStatus").textContent = "Two-player rooms need the Node backend or another realtime host.";
     return;
   }
-  $("menuView").classList.add("menu-join-active");
+  $("menuView").classList.add("menu-compact");
   $("duelRoomChoiceStep").classList.add("hidden");
   $("createGameTypeStep").classList.add("hidden");
   $("joinRoomStep").classList.remove("hidden");
@@ -1668,6 +1715,7 @@ $("tugReadyBtn").addEventListener("click", readyForRoom);
 $("duelReadyBtn").addEventListener("click", readyForRoom);
 $("raceReadyBtn").addEventListener("click", readyForRoom);
 $("shareResultBtn").addEventListener("click", shareResult);
+$("resultMenuBtn").addEventListener("click", backToMenu);
 $("resultLeaderboardBtn").addEventListener("click", () => {
   state.activeLeaderboardMode = modeLabel(state.mode);
   hideResultCard();
@@ -1743,6 +1791,7 @@ $("createRoomBtn").disabled = true;
 $("joinRoomBtn").disabled = true;
 $("submitJoinRoomBtn").disabled = true;
 initTheme();
+initContrast();
 initScoreTip();
 registerServiceWorker();
 $("playerName").value = localStorage.getItem(PLAYER_NAME_STORAGE_KEY) || "";
